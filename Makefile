@@ -1,7 +1,7 @@
 CC     := g++
 CFLAGS := -lnfnetlink -lnetfilter_queue
 TARGET := alg
-OBJS   := main.o ip.o state.o
+OBJS   := main.o ip.o state.o packet.o
 
 all: $(TARGET)
 
