@@ -1,15 +1,15 @@
 CC     := g++
 CFLAGS := -lnfnetlink -lnetfilter_queue
-TARGET := test
+TARGET := alg
 OBJS   := main.o ip.o state.o
 
 all: $(TARGET)
 
 $(TARGET) : $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
+	$(CC) -o $(TARGET) $(OBJS) $(CFLAGS)
 
 %.o: %.cc
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -c -o $@ $<  $(CFLAGS)
 
 clean :
 	rm -f $(TARGET)
