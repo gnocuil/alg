@@ -1,0 +1,4 @@
+sudo ip6tables -t raw -D PREROUTING -j NFQUEUE --queue-num 0
+sudo ip6tables -t raw -D PREROUTING -j NFQUEUE --queue-num 0
+sudo iptables -t raw -D PREROUTING -j NFQUEUE --queue-num 0
+sudo iptables -t raw -D PREROUTING -j NFQUEUE --queue-num 0
