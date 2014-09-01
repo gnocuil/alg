@@ -4,7 +4,7 @@
 #include <queue>
 #include "ip.h"
 
-const uint16_t MIN_PORT = 10000;
+const uint16_t MIN_PORT = 20000;
 const uint16_t MAX_PORT = 60000;
 
 class StateManager {
