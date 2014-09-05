@@ -98,7 +98,6 @@ void Packet::handleTransportLayer(int offset, int protocol)
     transport_len_ = obuf_len_ - offset;
     switch (protocol) {
     case IPPROTO_TCP:
-        istcp_ = true;
         tcp_ = (tcphdr*)(obuf_ + offset);
     default:
         //TODO
@@ -114,12 +113,32 @@ void Packet::setTransportLen(int len)
 
 void Packet::updateChecksum()
 {
-    if (istcp_) tcp_->check = 0;
+    if (tcp_) tcp_->check = 0;
     if (ipVersionBefore_ == 6) {
-        if (istcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip_->saddr), &(ip_->daddr), 4);
+        if (tcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip_->saddr), &(ip_->daddr), 4);
         ip_->check = ip_checksum(ip_, transport_len_ + 20);
     } else {
-        if (istcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip6_->ip6_src), &(ip6_->ip6_dst), 16);
+        if (tcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip6_->ip6_src), &(ip6_->ip6_dst), 16);
     }
+}
+
+void Packet::print()
+{
+    for (int i = 0; i < ibuf_len_; ++i) {
+        printf("%02x ", ibuf_[i] & 0xff);
+        if (i % 32 == 31) printf("\n");
+    }
+    if (tcp_) {
+        int hl = getTCPHeaderLen();
+        int tl = getTransportLen();
+        if (hl < tl) {
+            putchar('\n');
+            printf("hl=%d tl=%d\n--------START------------\n", hl, tl);
+            for (int i = hl; i < tl; ++i)
+                putchar(*((char*)tcp_ + i));
+            printf("---------END-----------\n");
+        }
+    }
+    printf("\n");
 }
 

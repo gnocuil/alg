@@ -58,7 +58,7 @@ static int process_app(PacketPtr pkt, int c2s)
 {
 	tcphdr* tcp = pkt->getTCPHeader();
 	int len = pkt->getTransportLen();
-	int hl = tcp->th_off * 4;
+	int hl = pkt->getTCPHeaderLen();
 	
 	const int key = int(tcp->th_sport) * tcp->th_dport;
 	
@@ -116,6 +116,7 @@ static int translate6to4(PacketPtr pkt)
     if (!pkt->isTCP()) {
         return 0;
     }
+    pkt->print();
     
     nat.begin(pkt);
     nat.doSPort(pkt);
@@ -129,7 +130,7 @@ static int translate6to4(PacketPtr pkt)
 static int translate4to6(PacketPtr pkt)
 {
     printf("translate4->6! len=%d\n", pkt->ibuf_len_);
-    iphdr* ip = pkt->getIPHeader();
+//    iphdr* ip = pkt->getIPHeader();
     if (!sm.isAddrInRange(pkt->getDest4())) {
         //cout << "IPv4 address " << IPv4Addr(ip->daddr) << " not in range! return" << endl;
         return 0;
@@ -137,6 +138,8 @@ static int translate4to6(PacketPtr pkt)
     if (!pkt->isTCP()) {
         return 0;
     }
+    pkt->print();
+    
     nat.begin(pkt);
     process_app(pkt, 0);
     nat.doDPort(pkt);
