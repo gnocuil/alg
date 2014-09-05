@@ -1,0 +1,50 @@
+%class-name HTTPParser
+%scanner HTTPScanner.h
+%scanner-class-name HTTPScanner
+%scanner-token-function d_scanner.lex()
+%baseclass-preinclude tokentype.h
+
+%stype TokenType
+%token STATUS_IDENT INTEGER HEADER_IDENT HEADER_VALUE TAG_IDENT TAG_IGNORE ATT_VALUE TAG_IDENT_HREF URL_NAME URL_IDENT
+%%
+
+httpmessage: statusline httpheaders emptyline httpbody
+;
+statusline: STATUS_IDENT INTEGER STATUS_IDENT '\n' {
+    std::cout << "Status: version=" << $1 << "  code=" << $2 << " Reason=" << $3 << std::endl;
+}
+;
+httpheaders: httpheaders httpheader
+    | httpheader
+;
+httpheader: HEADER_IDENT ':' HEADER_VALUE '\n' {
+    std::cout << "Header: [" << $1 << "]=<" << $3 << ">" << std::endl;
+}
+;
+emptyline: '\n'     {ignore=0;}
+;
+httpbody: httpbody tag
+    | 
+;
+tag : '<' TAG_IDENT {beginTag($2);} attributes '>'
+    | '<' '/' TAG_IDENT {endTag($3);} '>'
+    | '<' TAG_IGNORE
+;
+attributes: attributes attribute
+    |
+;
+attribute: TAG_IDENT_HREF '=' url
+    | TAG_IDENT '=' ATT_VALUE
+;
+url: URL_NAME ':' '/' '/' INTEGER '.' INTEGER '.' INTEGER '.' INTEGER '/' {
+        reportIP($5 + "." + $7 + "." + $9 + "." + $11, $5.pos, $11.pos_end);
+    } url_trailing
+    | error
+;
+url_trailing :
+    | url_trailing URL_IDENT
+    | url_trailing INTEGER
+    | url_trailing '/'
+    | url_trailing '.'
+;
+

@@ -1,0 +1,73 @@
+%class-name = "HTTPScanner"
+%input-interface = "input.h"
+%input-implementation = "input.hpp"
+%case-insensitive
+%x header body tag_start tag_att tag_attvalue tag_attvalue_href
+%%
+
+[0-9]+                  return HTTPParser::INTEGER;
+[A-Za-z0-9\/\.]+        return HTTPParser::STATUS_IDENT;
+\n                      {begin(StartCondition__::header); return matched()[0]; }
+.
+
+
+<header>{
+    ^\n                   begin(StartCondition__::body); return matched()[0];
+    ^[a-zA-Z\-]+          return HTTPParser::HEADER_IDENT;
+    \:                    return matched()[0];
+    [ \t]*
+    [^\:\n \t][^\n]*      return HTTPParser::HEADER_VALUE;
+    \n                    return matched()[0];
+}
+
+<body>{
+    \<                    begin(StartCondition__::tag_start);return matched()[0];
+    \n
+    .
+}
+
+<tag_start>{
+    \/                     return matched()[0];
+    [A-Za-z][A-Za-z0-9]*   begin(StartCondition__::tag_att);return HTTPParser::TAG_IDENT;
+    [^A-Za-z\/][^\>]*\>?   begin(StartCondition__::body);return HTTPParser::TAG_IGNORE;
+}
+
+<tag_att>{
+    [A-Za-z][A-Za-z0-9]*   {
+        if (matched()=="href") {
+            begin(StartCondition__::tag_attvalue_href);
+            return HTTPParser::TAG_IDENT_HREF;
+        }
+        return HTTPParser::TAG_IDENT;
+    }
+    \>                     begin(StartCondition__::body);return matched()[0];
+    \=                     begin(StartCondition__::tag_attvalue);return matched()[0];
+    [ \t]*
+}
+
+<tag_attvalue>{
+    [^ \t\'\"\>]+          |
+    \'[^\']*\'             |
+    \"[^\"]*\"             begin(StartCondition__::tag_att);return HTTPParser::ATT_VALUE;
+    \>                     begin(StartCondition__::body);return matched()[0];
+    [ \t]*
+}
+<tag_attvalue_href>{
+    \=                     urlFirst=true;inURL=false;return matched()[0];
+    [ \t]*                 if(inURL){inURL=false;begin(StartCondition__::tag_att);}
+    \'                     |
+    \"                     if(!inURL)inURL=true;else{inURL=false;begin(StartCondition__::tag_att);}
+    [a-zA-Z][a-zA-Z0-9]*   {
+        if (urlFirst) {
+            std::cout<<"URL_NAME:"<<matched()<<std::endl;
+            urlFirst=false;
+            return HTTPParser::URL_NAME;
+        }
+        std::cout<<"URL_IDENT:"<<matched()<<std::endl;
+        return HTTPParser::URL_IDENT;
+    }
+    [0-9]+                 std::cout<<"URL_INT:"<<matched()<<std::endl;urlFirst=false;return HTTPParser::INTEGER;
+    \>                     begin(StartCondition__::body);return matched()[0];
+    .                      urlFirst=false;printf("URL_CHAR:%c\n", matched()[0]);return matched()[0];
+}
+
