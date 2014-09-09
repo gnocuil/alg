@@ -7,6 +7,7 @@
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include "ip.h"
+#include "state.h"
 
 const int BUF_LEN = 2000;
 
@@ -34,6 +35,9 @@ public:
     
     IPv4Addr getDest4() const { return IPv4Addr(ip_->daddr); }
     IPv6Addr getDest6() const { return IPv6Addr(ip6_->ip6_dst); }
+    
+    DEST getDEST() const { return ipVersionBefore_ == 4 ? CLIENT : SERVER; }
+    FlowPtr getFlow();
     
     void print();
     

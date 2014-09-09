@@ -2,18 +2,24 @@ class Input {
     std::deque<unsigned char> d_deque;  // pending input chars
     std::istream *d_in;                 // ptr for easy streamswitching
     size_t d_lineNr;                    // line count
-
 public:
     Input()
     : d_in(0),
-      d_lineNr(1) {
+      d_lineNr(1){
     }
+    void* buf_;//Communicator *c_
     
     Input(std::istream *iStream, size_t lineNr = 1)
     : d_in(iStream),
       d_lineNr(lineNr) {
+        resolve();
     }
     
+    ~Input() {
+        if (d_in) {
+            close();
+        }
+    }
     
     size_t get() {                   // the next range
         switch (size_t ch = next())         // get the next input char
@@ -56,15 +62,14 @@ private:
             if (d_in == 0)
                 return AT_EOF;
             ch = d_in->get();
-/*            if (!(*d_in)) {
-                static int cnt = 0;
-                if (cnt == 0) {
-                    ++cnt;
+            if (!(*d_in)) {
+                std::istream *d_in_new = getNewIstream();
+                if (d_in_new) {
                     delete d_in;
-                    d_in = new std::istringstream("89");
+                    d_in = d_in_new;
                     ch = d_in->get();
                 }
-            }*/
+            }
             return *d_in ? ch : static_cast<size_t>(AT_EOF);
         }
 
@@ -72,5 +77,8 @@ private:
         d_deque.pop_front();
         return ch;
     }
+    
+    void resolve();
+    std::istream* getNewIstream();
 };
 

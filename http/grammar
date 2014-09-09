@@ -11,17 +11,17 @@
 httpmessage: statusline httpheaders emptyline httpbody
 ;
 statusline: STATUS_IDENT INTEGER STATUS_IDENT '\n' {
-    std::cout << "Status: version=" << $1 << "  code=" << $2 << " Reason=" << $3 << std::endl;
+    std::cout << "#Status: version=" << $1 << "  code=" << $2 << " Reason=" << $3 << std::endl;
 }
 ;
 httpheaders: httpheaders httpheader
     | httpheader
 ;
 httpheader: HEADER_IDENT ':' HEADER_VALUE '\n' {
-    std::cout << "Header: [" << $1 << "]=<" << $3 << ">" << std::endl;
+    std::cout << " Header: [" << $1 << "]=<" << $3 << ">" << std::endl;
 }
 ;
-emptyline: '\n'     {ignore=0;}
+emptyline: '\n'     {ignore=0;std::cout<<"emptyline!\n";}
 ;
 httpbody: httpbody tag
     | 

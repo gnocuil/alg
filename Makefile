@@ -1,13 +1,13 @@
 CC        := g++
-CFLAGS    := -lnfnetlink -lnetfilter_queue
+CFLAGS    := -lnfnetlink -lnetfilter_queue -lpthread --std=c++11
 TARGET    := alg
-OBJS      := main.o ip.o state.o packet.o socket.o nat.o
+OBJS      := main.o ip.o state.o packet.o socket.o nat.o communicator.o parser.o
 protocols := http
 
 .PHONY: all
 all: $(TARGET)
 
-$(TARGET) : $(OBJS) proto
+$(TARGET) : proto $(OBJS)
 	$(CC) -o $(TARGET) $(OBJS) $(foreach p,$(protocols),$(p)/lex.o) $(foreach p,$(protocols),$(p)/parse.o)  $(CFLAGS)
 
 %.o: %.cc

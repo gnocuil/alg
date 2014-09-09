@@ -4,6 +4,8 @@
 
 #include "packet.h"
 
+using namespace std;
+
 static uint16_t tcp_checksum(const void *tcphead, size_t tcplen, const void* saddr, const void*  daddr, int addrlen)
 {
     const uint16_t *buf = (uint16_t*)tcphead;
@@ -122,12 +124,27 @@ void Packet::updateChecksum()
     }
 }
 
+FlowPtr Packet::getFlow() {
+    FlowPtr ret = FlowPtr();
+    if (tcp_) {
+        if (ipVersionBefore_ == 6) {
+            ret = sm.getMapping(IP6Port(IPv6Addr(ip6_->ip6_src), tcp_->source), IPv6Addr(ip6_->ip6_dst));
+            cout << "getFlow6: " << IP6Port(IPv6Addr(ip6_->ip6_src), tcp_->source) << endl;
+        } else {
+            ret = sm.getMapping(IP4Port(IPv4Addr(ip_->daddr), tcp_->dest), IPv4Addr(ip_->saddr));
+        }
+    }
+    return ret;
+}
+
 void Packet::print()
 {
+    /*
     for (int i = 0; i < ibuf_len_; ++i) {
         printf("%02x ", ibuf_[i] & 0xff);
         if (i % 32 == 31) printf("\n");
     }
+    */
     if (tcp_) {
         int hl = getTCPHeaderLen();
         int tl = getTransportLen();

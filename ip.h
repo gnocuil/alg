@@ -13,6 +13,7 @@ public:
     std::string getString() const;
     uint32_t getInt() const;
     
+    friend bool operator< (const IPv4Addr& a, const IPv4Addr& b) {return a.ip_ < b.ip_;}
     friend std::ostream& operator<< (std::ostream& os, const IPv4Addr &ip);
 private:
     uint32_t ip_;

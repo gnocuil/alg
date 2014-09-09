@@ -8,28 +8,32 @@
 [0-9]+                  return HTTPParser::INTEGER;
 [A-Za-z0-9\/\.]+        return HTTPParser::STATUS_IDENT;
 \n                      {begin(StartCondition__::header); return matched()[0]; }
+\r
 .
 
 
 <header>{
-    ^\n                   begin(StartCondition__::body); return matched()[0];
-    ^[a-zA-Z\-]+          return HTTPParser::HEADER_IDENT;
+    ^\r\n                 std::cout<<"begin body!!!\n";begin(StartCondition__::body); return matched()[1];
+    ^\n                   std::cout<<"begin body!!!\n";begin(StartCondition__::body); return matched()[0];
+    ^[a-zA-Z\-]+          std::cout<<"IDENT:"<<matched()<<std::endl;return HTTPParser::HEADER_IDENT;
     \:                    return matched()[0];
     [ \t]*
-    [^\:\n \t][^\n]*      return HTTPParser::HEADER_VALUE;
+    [^\:\n \t\r][^\n\r]*    std::cout<<"VALUE:"<<matched()<<std::endl;  return HTTPParser::HEADER_VALUE;
     \n                    return matched()[0];
+    \r
 }
 
 <body>{
-    \<                    begin(StartCondition__::tag_start);return matched()[0];
+    \<                    std::cout<<"begin tag_start!!!\n";begin(StartCondition__::tag_start);return matched()[0];
     \n
     .
+    \r
 }
 
 <tag_start>{
     \/                     return matched()[0];
-    [A-Za-z][A-Za-z0-9]*   begin(StartCondition__::tag_att);return HTTPParser::TAG_IDENT;
-    [^A-Za-z\/][^\>]*\>?   begin(StartCondition__::body);return HTTPParser::TAG_IGNORE;
+    [A-Za-z][A-Za-z0-9]*   std::cout<<"begin tag_att!!! "<<matched()<<std::endl;begin(StartCondition__::tag_att);return HTTPParser::TAG_IDENT;
+    [^A-Za-z\/][^\>]*\>?   std::cout<<"begin tag_body!!! "<<matched()<<std::endl;begin(StartCondition__::body);return HTTPParser::TAG_IGNORE;
 }
 
 <tag_att>{

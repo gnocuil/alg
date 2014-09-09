@@ -8,17 +8,26 @@
 // $insert scanner.h
 #include "HTTPScanner.h"
 
+#include "../parser.h"
+
 #undef HTTPParser
-class HTTPParser: public HTTPParserBase
+class HTTPParser: public HTTPParserBase, public Parser
 {
     // $insert scannerobject
     HTTPScanner d_scanner;
         
     public:
-        HTTPParser() {
+        HTTPParser(Communicator *c)
+          : Parser(c),
+            d_scanner(c) {
             d_scanner.setSval(&d_val__);
         }
         int parse();
+        
+        virtual void run__() {
+            
+            parse();
+        }
 
     private:
         void error(char const *msg);    // called on (syntax) errors

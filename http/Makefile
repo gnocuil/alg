@@ -1,11 +1,12 @@
-all: parse.o
+all: lex.o parse.o
 	@echo http
-parse.o: lex.cc parse.cc HTTPScanner.h input.hpp
+lex.o: lex.cc HTTPScanner.h HTTPScannerbase.h input.h HTTPParserbase.h
 	g++ -c lex.cc  --std=c++11
+parse.o: parse.cc HTTPParser.h HTTPParserbase.h input.hpp
 	g++ -c parse.cc  --std=c++11
-lex.cc: lexer
+HTTPScanner.h HTTPScannerbase.h lex.cc: lexer
 	flexc++ lexer
-parse.cc: grammar
+HTTPParser.h HTTPParserbase.h parse.cc: grammar
 	bisonc++ grammar
 	
 	

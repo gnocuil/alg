@@ -22,13 +22,16 @@
 #include "socket.h"
 #include "nat.h"
 
+#include "communicator.h" //TODO: remove
+
 using namespace std;
 
 SocketRaw4 socket4;
 SocketRaw6 socket6;
 
 StateManager sm;
-NAT nat(sm);
+//NAT nat(sm);
+NAT nat;
 
 /* returns packet id */
 static PacketPtr print_pkt (struct nfq_data *tb)
@@ -52,60 +55,6 @@ void init_socket()
     socket6.init();
 }
 
-static map<int, int> offset;
-
-static int process_app(PacketPtr pkt, int c2s)
-{
-	tcphdr* tcp = pkt->getTCPHeader();
-	int len = pkt->getTransportLen();
-	int hl = pkt->getTCPHeaderLen();
-	
-	const int key = int(tcp->th_sport) * tcp->th_dport;
-	
-	if (offset[key] != 0) {
-	    if (c2s) {
-	        tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offset[key]);
-	    } else {
-	        tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offset[key]);
-	    }
-	}
-	
-	//--printf("p_app: len=%d hl=%d th_off=%d sport=%d dport=%d c2s=%d key=%d offset=%d\n", len, hl, tcp->th_off, ntohs(tcp->th_sport), ntohs(tcp->th_dport), c2s, key, offset[key]);
-
-	if (len > hl) {
-	    string str((char*)tcp + hl, (char*)tcp + len);
-	    if (str.size() > 5 && str.substr(0, 4) == "EPRT") {
-    	    cout << "str:[" << str << "]" << endl;
-	        int p;
-	        int port;
-	        int cnt = 0;
-	        char buf1[100] = {0};
-	        for (int i = 0; i < str.size(); ++i) {
-	            if (str[i] == '|') {
-	                str[i] = ' ';
-	                ++cnt;
-	            }
-//	            if (cnt == 2) str[i] = ' ';
-	        }
-	        sscanf(str.c_str(), "EPRT %d %s %d", &p, buf1, &port);
-	        printf("addr=%s p=%d port=%d\n", buf1, p, port);
-	        
-	        IP4Port ip4p = sm.doMapping(IP6Port(IPv6Addr(buf1), ntohs(port)));
-	        
-	        static char buf[2000] = {0};
-	        sprintf(buf, "EPRT |1|%s|%d|\r\n", ip4p.getIP().getString().c_str(), ntohs(ip4p.getPort()));
-	        int newlen = strlen(buf);
-	        memcpy((char*)tcp + hl, buf, newlen);
-	        newlen += hl;
-	        offset[key] += newlen - len;
-	        printf("newlen=%d buf=%s key=%d offset=%d\n", newlen, buf, key, offset[key]);
-	        pkt->setTransportLen(newlen);
-	        return newlen;
-	    }
-	}
-	return len;
-}
-
 static int translate6to4(PacketPtr pkt)
 {
     printf("translate6->4! len=%d\n", pkt->ibuf_len_);
@@ -116,11 +65,11 @@ static int translate6to4(PacketPtr pkt)
     if (!pkt->isTCP()) {
         return 0;
     }
-    pkt->print();
+    //pkt->print();
     
     nat.begin(pkt);
+    nat.doApp(pkt);
     nat.doSPort(pkt);
-    process_app(pkt, 1);
     nat.doIP(pkt);
     nat.finish(pkt);
     socket4.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest4());
@@ -138,10 +87,10 @@ static int translate4to6(PacketPtr pkt)
     if (!pkt->isTCP()) {
         return 0;
     }
-    pkt->print();
+    //pkt->print();
     
     nat.begin(pkt);
-    process_app(pkt, 0);
+    nat.doApp(pkt);
     nat.doDPort(pkt);
     nat.doIP(pkt);
     nat.finish(pkt);
@@ -170,6 +119,10 @@ int main(int argc, char **argv)
 {
     sm.addIPv4Pool(IPv4Addr("10.20.30.40"));
     sm.setIPv6Prefix(IPv6Addr("2002::0"));
+/*    
+    StatefulCommunicator sc;
+    sc.addData("Hello Comm!!");
+*/
 
 	struct nfq_handle *h;
 	struct nfq_q_handle *qh;
