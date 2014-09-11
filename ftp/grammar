@@ -1,0 +1,41 @@
+%class-name FTPParser
+%scanner FTPScanner.h
+%scanner-class-name FTPScanner
+%scanner-token-function d_scanner.lex()
+%baseclass-preinclude tokentype.h
+
+%stype TokenType
+%token INT RESPONSE_TEXT REQUEST_TEXT CMD CMD_EPRT
+%%
+
+FTPmessage: request | response
+;
+
+response: INT RESPONSE_TEXT '\n'  {std::cout<< "FTP response " << $1 << std::endl;}
+;
+
+request: CMD '\n' {std::cout<< "FTP request" << std::endl;}
+    | CMD REQUEST_TEXT '\n' {std::cout<< "FTP request " << $1 << std::endl;}
+    | CMD_EPRT INT ip INT '\n' {
+        std::cout << "found eprt: ip=" << $3 << " port=" << $4;
+        std::cout << "  pos " << $3.pos << " " << $3.pos_end << std::endl;
+        /*
+                Operation op;
+                op.start_pos = $3.pos;
+                op.end_pos = $3.pos_end;
+                op.op = Operation::REPLACE;
+                op.newdata = sm.getMapping(IP6Port(IPv6Addr($3.s), 
+                    FlowPtr getMapping(const IP6Port& ip6Port, const IPv6Addr& ip6srv);
+                addOperation(op);  
+                */
+    }
+    | error
+;
+
+ip: ipp ':' ':' ipp {$$ = $1 + "::" + $4;}
+    | ipp {$$ = $1;}
+;
+ipp: 
+     INT {$$ = $1;}
+    | ipp ':' INT {$$ = $1 + ":" + $3;}
+;

@@ -1,0 +1,36 @@
+%class-name = "FTPScanner"
+%x request response eprt
+%%
+
+^[0-9]+             begin(StartCondition__::response);return FTPParser::INT;
+^[A-Za-z]+          {
+    if (matched() == "EPRT") {
+        begin(StartCondition__::eprt);return FTPParser::CMD_EPRT;
+    } else {
+        begin(StartCondition__::request);return FTPParser::CMD;
+    }
+}
+[^0-9A-Za-z\n].*    //ignore
+\n                  return matched()[0];
+
+<response>{
+[^ \r\n][^\r\n]*    return FTPParser::RESPONSE_TEXT;
+[ ]                 ;
+\r\n                begin(StartCondition__::INITIAL);return matched()[1];
+\n                  begin(StartCondition__::INITIAL);return matched()[0];
+}
+
+<request>{
+[^ \r\n][^\r\n]*    return FTPParser::REQUEST_TEXT;
+[ ]                 ;
+\r\n                begin(StartCondition__::INITIAL);return matched()[1];
+\n                  begin(StartCondition__::INITIAL);return matched()[0];
+}
+
+<eprt>{
+[ |]                ;
+[0-9]+              return FTPParser::INT;
+[^ |\r\n]           return matched()[0];
+\r\n                begin(StartCondition__::INITIAL);return matched()[1];
+\n                  begin(StartCondition__::INITIAL);return matched()[0];
+}
