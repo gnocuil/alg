@@ -9,6 +9,7 @@
 #include "FTPScanner.h"
 
 #include "../parser.h"
+#include "../state.h"
 
 #undef FTPParser
 class FTPParser: public FTPParserBase, public Parser

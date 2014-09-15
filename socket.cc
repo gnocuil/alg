@@ -8,6 +8,15 @@
 
 using namespace std;
 
+SocketRaw4 socket4;
+SocketRaw6 socket6;
+
+void init_socket()
+{
+    socket4.init();
+    socket6.init();
+}
+
 void Socket::init()
 {    
     fd_ = initSocket();
@@ -28,7 +37,7 @@ int SocketRaw6::initSocket()
 }
 
 int SocketRaw4::send(u_int8_t* buf, int len, const IPv4Addr& daddr)
-{ cout << "send4 len=" << len << " dest=" << daddr << endl;
+{ //cout << "send4 len=" << len << " dest=" << daddr << endl;
 	struct sockaddr_in dest;
 	memset(&dest, 0, sizeof(dest));
 	dest.sin_family = AF_INET;
@@ -43,7 +52,7 @@ int SocketRaw4::send(u_int8_t* buf, int len, const IPv4Addr& daddr)
 }
 
 int SocketRaw6::send(u_int8_t* buf, int len, const IPv6Addr& daddr)
-{ cout << "send6 len=" << len << " dest=" << daddr << endl;
+{ //cout << "send6 len=" << len << " dest=" << daddr << endl;
 	struct sockaddr_in6 dest;
 	memset(&dest, 0, sizeof(dest));
 	dest.sin6_family = AF_INET6;

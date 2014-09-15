@@ -25,7 +25,6 @@ class HTTPParser: public HTTPParserBase, public Parser
         int parse();
         
         virtual void run__() {
-            
             parse();
         }
 
@@ -47,13 +46,13 @@ class HTTPParser: public HTTPParserBase, public Parser
         void beginTag(HTTPParserBase::STYPE__ tag) {
             if (ignore) return;
             curTag = tag.s;
-            std::cout << "begin tag:[" << tag << "] pos=" << tag.pos << " " << tag.pos_end << std::endl;
+            //std::cout << "begin tag:[" << tag << "] pos=" << tag.pos << " " << tag.pos_end << std::endl;
             if (tag.s == "textarea" || tag.s == "script") {
                 ++ignore;
             }
         }
         void endTag(HTTPParserBase::STYPE__ tag) {
-            std::cout << "end tag:[" << tag << "]" << std::endl;
+            //std::cout << "end tag:[" << tag << "]" << std::endl;
             if (tag.s == "textarea" || tag.s == "script") {
                 --ignore;
             }
@@ -61,6 +60,12 @@ class HTTPParser: public HTTPParserBase, public Parser
         void reportIP(std::string ip, int pos, int pos_end) {
             if (curTag == "a") {
                 std::cout << "Found ip in a/href: " << ip << " pos:[" << pos << "," << pos_end << ")" << std::endl;
+                Operation op;
+                op.start_pos = pos;
+                op.end_pos = pos_end;
+                op.op = Operation::REPLACE;
+                op.newdata = "[1234::" + ip + "]";
+                addOperation(op);
             }
         }
 };

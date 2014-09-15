@@ -25,3 +25,8 @@ public:
 protected:
     virtual int initSocket();
 };
+
+extern SocketRaw4 socket4;
+extern SocketRaw6 socket6;
+
+void init_socket();

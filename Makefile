@@ -1,8 +1,8 @@
 CC        := g++
-CFLAGS    := -lnfnetlink -lnetfilter_queue -lpthread --std=c++11
+CFLAGS    := -lnfnetlink -lnetfilter_queue -lpthread --std=c++11 -O2
 TARGET    := alg
-OBJS      := main.o ip.o state.o packet.o socket.o nat.o communicator.o parser.o
-protocols := http
+OBJS      := main.o ip.o state.o packet.o socket.o nat.o communicator.o parser.o nfqueue.o
+protocols := http ftp
 
 .PHONY: all
 all: $(TARGET)
@@ -15,11 +15,11 @@ $(TARGET) : proto $(OBJS)
 
 .PHONY: proto
 proto: 
-	$(foreach dir,$(protocols),make -C $(dir)) 
+	$(foreach dir,$(protocols),make -C $(dir);) 
 
 .PHONY: clean
 clean :
 	rm -f $(TARGET)
 	rm -f *.o
 	rm -rf obj
-	$(foreach dir,$(protocols),make clean -C $(dir)) 
+	$(foreach dir,$(protocols),make clean -C $(dir);) 

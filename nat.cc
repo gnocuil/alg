@@ -1,9 +1,14 @@
 #include <cstring>
 #include <iostream>
+#include <net/ethernet.h>
+#include "socket.h"
 #include "nat.h"
 #include "ip.h"
+#include "state.h"
 
 using namespace std;
+
+NAT nat;
 
 static void make_ip4pkt(u_int8_t* header, u_int16_t payload_len, const IPv4Addr& ip4saddr, const IPv4Addr& ip4daddr)
 {
@@ -37,16 +42,47 @@ static void make_ip6pkt(u_int8_t* header, u_int16_t payload_len, const IPv6Addr&
     ip6->ip6_dst = ip6daddr.getIn6Addr();
 }
 
-void NAT::begin(PacketPtr pkt)
+int NAT::translate(PacketPtr pkt)
+{
+    if (pkt->hw_protocol == ETHERTYPE_IPV6) {
+        if (!sm.isAddrInRange(pkt->getDest6()))
+            return 0;
+    } else {
+        if (!sm.isAddrInRange(pkt->getDest4()))
+            return 0;
+    }
+    if (!pkt->isTCP()) {
+        return 0;
+    }
+    if (begin(pkt))
+        return 0;
+    doApp(pkt);
+    doSPort(pkt);
+    doDPort(pkt);
+    doIP(pkt);
+    finish(pkt);
+    if (pkt->hw_protocol == ETHERTYPE_IPV6) {
+        socket4.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest4());
+    } else {
+        socket6.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest6());
+    }
+    return 1;
+}
+
+int NAT::begin(PacketPtr pkt)
 {
     tcphdr* tcp = pkt->getTCPHeader();//TODO: not tcp
     if (pkt->getIPVersion() == 4) {
         ip6_hdr* ip6 = pkt->getIP6Header();
         ip4p_ = sm.doMapping(IP6Port(IPv6Addr(ip6->ip6_src), tcp->source), IPv6Addr(ip6->ip6_dst))->ip4p;
+        sm.setCurIPv6SrvAddr(IPv6Addr(ip6->ip6_dst));
     } else {
         iphdr* ip = pkt->getIPHeader();
-        ip6p_ = sm.getMapping(IP4Port(IPv4Addr(ip->daddr), tcp->dest), IPv4Addr(ip->saddr))->ip6p;
+        FlowPtr f = sm.getMapping(IP4Port(IPv4Addr(ip->daddr), tcp->dest), IPv4Addr(ip->saddr));
+        if (!f) return 1;
+        ip6p_ = f->ip6p;
     }
+    return 0;
 }
 
 void NAT::doSPort(PacketPtr pkt)
@@ -87,6 +123,54 @@ void NAT::finish(PacketPtr pkt)
     pkt->updateChecksum();
 }
 
+int NAT::modify(PacketPtr pkt, std::vector<Operation>& ops)
+{
+    if (ops.size() == 0)
+        return 0;
+    sort(ops.begin(), ops.end());
+    int len = pkt->getTransportLen();
+	int hl = pkt->getTCPHeaderLen();
+	len -= hl;
+	tcphdr* tcp = pkt->getTCPHeader();
+	tcphdr* tcp_old = pkt->getIbufTCPHeader();
+	char *d = (char*)tcp + hl;
+	char *s = (char*)tcp_old + hl;
+	int len_old = len;
+	for (int i = 0; i < ops.size(); ++i) {
+	    printf("replace : %d %d [", ops[i].start_pos, ops[i].end_pos);
+	    for (int j = ops[i].start_pos; j < ops[i].end_pos; ++j)
+	        putchar(s[j]);
+	    printf("] with <%s>\n", ops[i].newdata.c_str());
+	    int delta = ops[i].newdata.size() - (ops[i].end_pos - ops[i].start_pos);
+	    printf("delta=%d\n", delta);
+	    len += delta;
+	}
+	printf("newlen=%d\n", len);
+	int cnt = 0, pd, ps;
+	bool inside = false;
+	for (pd = ps = ops[0].start_pos; pd < len; ++pd) {
+	    if (!inside && ps == ops[cnt].start_pos) {
+	        if (ops[cnt].newdata.size() == 0) {
+	            ps = ops[cnt++].end_pos;
+	        } else {
+    	        inside = true;
+	            ps = 0;
+	        }
+	    }
+	    if (inside) {
+	        d[pd] = ops[cnt].newdata[ps++];
+	        if (ps == ops[cnt].newdata.size()) {
+	            inside = false;
+	            ps = ops[cnt++].end_pos;
+	        }
+	    } else {
+	        d[pd] = s[ps++];
+	    }
+	}
+	pkt->setTransportLen(len + hl);
+	return len - len_old;
+}
+
 void NAT::doApp(PacketPtr pkt)
 {
     DEST dest = pkt->getDEST();
@@ -108,42 +192,20 @@ void NAT::doApp(PacketPtr pkt)
         tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsets2c);
 	}
 
-	if (len > hl) {
+	if (len > hl && !flow->ignored()) {
 	    string str((char*)tcp + hl, (char*)tcp + len);
-	    ParserPtr parser = flow->getParser("http", dest);
+	    ParserPtr parser = flow->getParser("ftp", dest);
 	    if (parser) {
 	        cout << "found parser! " << flow << endl;
-	        parser->process(str);
-	    }
-/*
-	    if (str.size() > 5 && str.substr(0, 4) == "EPRT") {
-    	    cout << "str:[" << str << "]" << endl;
-	        int p;
-	        int port;
-	        int cnt = 0;
-	        char buf1[100] = {0};
-	        for (int i = 0; i < str.size(); ++i) {
-	            if (str[i] == '|') {
-	                str[i] = ' ';
-	                ++cnt;
-	            }
-//	            if (cnt == 2) str[i] = ' ';
+	        std::vector<Operation> ret = parser->process(str);
+	        if (ret.size() > 0) {
+	            printf("received %d operations!\n", ret.size());
+	            int delta = modify(pkt, ret);
+	            flow->addOffset(dest, delta);
+	            
+	            
 	        }
-	        sscanf(str.c_str(), "EPRT %d %s %d", &p, buf1, &port);
-	        printf("addr=%s p=%d port=%d\n", buf1, p, port);
-	        
-	        IP4Port ip4p = sm.doMapping(IP6Port(IPv6Addr(buf1), ntohs(port)), IPv6Addr(pkt->getIP6Header()->ip6_dst))->ip4p;
-	        
-	        static char buf[2000] = {0};
-	        sprintf(buf, "EPRT |1|%s|%d|\r\n", ip4p.getIP().getString().c_str(), ntohs(ip4p.getPort()));
-	        int newlen = strlen(buf);
-	        memcpy((char*)tcp + hl, buf, newlen);
-	        newlen += hl;
-	        flow->addOffset(SERVER, newlen - len);
-	        printf("newlen=%d buf=%s offset=%d\n", newlen, buf, flow->getOffset());
-	        pkt->setTransportLen(newlen);
 	    }
-*/
 	}
 }
 

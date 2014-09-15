@@ -1,4 +1,5 @@
 #include <cstring>
+#include <sstream>
 #include <arpa/inet.h>
 #include "ip.h"
 
@@ -114,6 +115,13 @@ uint16_t IP4Port::getPort() const
     return port_;
 }
 
+std::string IP4Port::getPortString() const
+{
+    char buf[10] = {0};
+    sprintf(buf, "%d", ntohs(port_));
+    return buf;
+}
+
 ostream& operator<< (ostream& os, const IP4Port &ip4Port)
 {
     return os << ip4Port.ip_ << ":" << ntohs(ip4Port.port_);
@@ -134,6 +142,14 @@ IP6Port::IP6Port(const IPv6Addr& ip, uint16_t port)
     : ip_(ip),
       port_(port)
 {
+}
+
+IP6Port::IP6Port(const IPv6Addr& ip, std::string port)
+    : ip_(ip)
+{
+    istringstream sin(port);
+    sin >> port_;
+    port_ = ntohs(port_);
 }
 
 bool IP6Port::isNull() const

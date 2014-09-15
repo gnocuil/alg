@@ -36,7 +36,7 @@ class HTTPScanner: public HTTPScannerBase
                             // be exec'ed after the rules's actions.
         HTTPParserBase::STYPE__ *d_val;
         bool inURL, urlFirst;
-        std::istream& ctois(Communicator *c) {c->test(10);
+        std::istream& ctois(Communicator *c) {
             std::string str((char*)(&c), sizeof(Communicator*));
             static std::istringstream sin(str);
             return sin;

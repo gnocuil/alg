@@ -4,9 +4,11 @@
 
 using namespace std;
 
+StateManager sm;
+
 std::ostream& operator<< (std::ostream& os, const Flow &f)
 {
-    return os << "Flow(" << f.ip6p << "<-->" << f.ip4p << ")";
+    return os << "Flow(" << f.ip6p << "<->" << f.ip6srv << " <=====> " << f.ip4p << "<->" << f.ip4srv << ")";
 }
 
 std::ostream& operator<< (std::ostream& os, const FlowPtr &f)
@@ -20,9 +22,13 @@ ParserPtr Flow::getParser(std::string protocol, DEST dest)
     if (protocol == "http") {
         if (dest == CLIENT) {
             if (!https2c) {
-                https2c = Parser::make("http");
+                https2c = Parser::make(protocol);
             }
             return https2c;
+        }
+    } else if (protocol == "ftp") {
+        if (dest == SERVER) {
+            return Parser::make(protocol);
         }
     }
     return ParserPtr();

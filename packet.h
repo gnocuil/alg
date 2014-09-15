@@ -27,6 +27,7 @@ public:
     bool isTCP() const { return tcp_ ? true : false; }
     int getTCPHeaderLen() const { return tcp_ ? tcp_->th_off * 4 : 0; }
     tcphdr* getTCPHeader() const { return tcp_; }
+    tcphdr* getIbufTCPHeader() const { return tcp_old_; }
     int getTransportLen() const { return transport_len_; }
     int getIPVersion() const { return ipVersionBefore_ == 4 ? 6 : 4; }
     
@@ -60,8 +61,9 @@ private:
     iphdr* ip_;
     ip6_hdr* ip6_;
     tcphdr* tcp_;
+    tcphdr* tcp_old_;
     
-    void handleTransportLayer(int offset, int protocol);
+    void handleTransportLayer(int offset, int offset_old, int protocol);
     
 };
 

@@ -6,24 +6,28 @@
 #include "ip.h"
 #include "parser.h"
 
-const uint16_t MIN_PORT = 20000;
+const uint16_t MIN_PORT = 21000;
 const uint16_t MAX_PORT = 60000;
 
 class Flow {
 public:
-    Flow() : offset_c2s(0), offset_s2c(0) {}
+    Flow() : offset_c2s(0), offset_s2c(0), ignore_(false) {}
     Flow(const IP6Port& ip6p_, const IP4Port& ip4p_, const IPv6Addr& ip6srv_, const IPv4Addr& ip4srv_)
         : ip6p(ip6p_),
           ip4p(ip4p_),
           ip6srv(ip6srv_),
           ip4srv(ip4srv_),
           offset_c2s(0),
-          offset_s2c(0) {}
+          offset_s2c(0),
+          ignore_(false) {}
     friend std::ostream& operator<< (std::ostream& os, const Flow &f);
     int getOffset(DEST dest);
     void addOffset(DEST dest, int delta);
     
     ParserPtr getParser(std::string protocol, DEST dest);
+    
+    void setIgnore() {ignore_ = true;}
+    bool ignored() {return ignore_;}
     
 //private:
     IP6Port ip6p;
@@ -34,6 +38,7 @@ private:
     int offset_c2s;
     int offset_s2c;
     ParserPtr https2c;
+    bool ignore_;
 };
 
 typedef boost::shared_ptr<Flow> FlowPtr;
@@ -51,8 +56,11 @@ public:
     bool isAddrInRange(const IPv4Addr& ip);
     
     FlowPtr doMapping(const IP6Port& ip6Port, const IPv6Addr& ip6srv);
+    FlowPtr doMapping(const IP6Port& ip6Port) {return doMapping(ip6Port, ip6srv_cur_);}
     FlowPtr getMapping(const IP6Port& ip6Port, const IPv6Addr& ip6srv);
     FlowPtr getMapping(const IP4Port& ip4Port, const IPv4Addr& ip4srv);
+    
+    void setCurIPv6SrvAddr(const IPv6Addr& addr) {ip6srv_cur_=addr;}
     
 private:
     std::queue<IP4Port> pool_;
@@ -60,6 +68,7 @@ private:
     std::map<std::pair<IP6Port, IPv6Addr>, FlowPtr> map64_;
     std::map<std::pair<IP4Port, IPv4Addr>, FlowPtr> map46_;
     IPv6Addr prefix_;
+    IPv6Addr ip6srv_cur_;
 };
 extern StateManager sm;
 

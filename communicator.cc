@@ -10,6 +10,7 @@ using namespace std;
 
 void StatelessCommunicator::addData(const std::string& data) {
     data_ = data;
+    Parser::run(this);
 }
 std::istream* StatelessCommunicator::getIStream() {
     return new istringstream(data_);
@@ -27,22 +28,33 @@ void StatefulCommunicator::addData(const std::string& data) {
         init();
     }
     COMMAND c = ADDDATA;
-    write(fd_data[1], &c, sizeof(c));
+    printf("fa: write data ADDDATA\n");
+    int cnt = write(fd_data[1], &c, sizeof(c));
+    printf("fa: write cnt=%d\n", cnt);
     do {
-        read(fd_ans[0], &c, sizeof(c));
+        printf("fa: reading ans(addData)\n");
+        int cnt = read(fd_ans[0], &c, sizeof(c));
+        printf("fa: read ans(addData) %d cnt=%d\n", c, cnt);
+        if (!cnt) return;
         switch (c) {
         case MOREDATA://parser has done
+            puts("addData::MOREDATA");
             break;
+        case QUIT:
+            puts("child thread has quit, cancel");
+            return;
         default:
             break;
         }
-    } while (1);
+    } while (0);
 }
-std::istream* StatefulCommunicator::getIStream() {cout<<"getIStream succ!"<<endl;
-    test(3);
-    COMMAND c;
+std::istream* StatefulCommunicator::getIStream() {
+    COMMAND c = MOREDATA;
+        printf("son: write ans MOREDATA\n");
+    write(fd_ans[1], &c, sizeof(c));
+        printf("son: reading data\n");
     read(fd_data[0], &c, sizeof(c));
-    cout << "received cmd " << c << endl;
+        printf("son: read data %d\n", c);
     switch (c) {
     case ADDDATA:
 //        cout << "add '" << data_ << "'" << endl;
@@ -56,30 +68,40 @@ std::istream* StatefulCommunicator::getIStream() {cout<<"getIStream succ!"<<endl
     return new istringstream(data_);
 }
 
-void StatefulCommunicator::test(int a) {
-    cout << "\t" << a << " :fd_data[0,1]=" << fd_data[0] << " " << fd_data[1];printf("   #%p\n", (void*)this);
-}
-
 void StatefulCommunicator::init() {
     running_ = true;
-    test(1);
     cout << "create thread"<<endl;
     pthread_create(&tid, NULL, _thread_t, this);
+    COMMAND c;
+    do {
+        printf("father: reading ans\n");    
+        read(fd_ans[0], &c, sizeof(c));
+        printf("father: read ans %d\n", c);
+        switch (c) {
+        case MOREDATA://parser has done
+            puts("init::MOREDATA!");
+            break;
+        default:
+            ;
+        }
+    } while (0);
 }
 
 void StatefulCommunicator::run() {
-    try {test(2);
+    try {
         Parser::run(this);
     } catch (const std::exception &e) {
-        cerr << "In thread TODO: caught exception [" << e.what() << "], quit." << endl;
+        cerr << "In thread " << tid << " : caught exception [" << e.what() << "], quit." << endl;
     }
-    
+    COMMAND c = QUIT;
+    write(fd_ans[1], &c, sizeof(c));
+    close(fd_ans[1]);
 }
 
 void* StatefulCommunicator::_thread_t(void* param) {
     StatefulCommunicator* com = (StatefulCommunicator*)param;
     com->run();
-    cerr << "!!! Thread QUIT !!!" << endl;
+    cerr << "!!! Thread " << com->tid << " QUIT !!!" << endl;
     return NULL;
 }
 

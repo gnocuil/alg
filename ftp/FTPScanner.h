@@ -34,17 +34,20 @@ class FTPScanner: public FTPScannerBase
                             // re-implement this function for code that must 
                             // be exec'ed after the rules's actions.
         FTPParserBase::STYPE__ *d_val;
+        int cnt;
 };
 
 // $insert scannerConstructors
 inline FTPScanner::FTPScanner(std::istream &in, std::ostream &out)
 :
-    FTPScannerBase(in, out)
+    FTPScannerBase(in, out),
+    cnt(0)
 {}
 
 inline FTPScanner::FTPScanner(std::string const &infile, std::string const &outfile)
 :
-    FTPScannerBase(infile, outfile)
+    FTPScannerBase(infile, outfile),
+    cnt(0)
 {}
 
 // $insert inlineLexFunction
@@ -61,7 +64,6 @@ inline void FTPScanner::preCode()
 inline void FTPScanner::postCode(PostEnum__ type) 
 {
     // optionally replace by your own code
-    static int cnt = 0;
     if (d_val) *d_val = TokenType(matched(), cnt, cnt + matched().size());
     cnt += matched().size();
 }

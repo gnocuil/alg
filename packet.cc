@@ -92,15 +92,16 @@ void Packet::unpack()
     }
     memcpy(obuf_ + ip_len_, ibuf_ + ip_len_old, ibuf_len_ - ip_len_old);
     obuf_len_ = ibuf_len_ - ip_len_old + ip_len_;
-    handleTransportLayer(ip_len_, protocol);
+    handleTransportLayer(ip_len_, ip_len_old, protocol);
 }
 
-void Packet::handleTransportLayer(int offset, int protocol)
+void Packet::handleTransportLayer(int offset, int offset_old, int protocol)
 {
     transport_len_ = obuf_len_ - offset;
     switch (protocol) {
     case IPPROTO_TCP:
         tcp_ = (tcphdr*)(obuf_ + offset);
+        tcp_old_ = (tcphdr*)(ibuf_ + offset_old);
     default:
         //TODO
         ;
@@ -129,7 +130,7 @@ FlowPtr Packet::getFlow() {
     if (tcp_) {
         if (ipVersionBefore_ == 6) {
             ret = sm.getMapping(IP6Port(IPv6Addr(ip6_->ip6_src), tcp_->source), IPv6Addr(ip6_->ip6_dst));
-            cout << "getFlow6: " << IP6Port(IPv6Addr(ip6_->ip6_src), tcp_->source) << endl;
+//            cout << "getFlow6: " << IP6Port(IPv6Addr(ip6_->ip6_src), tcp_->source) << endl;
         } else {
             ret = sm.getMapping(IP4Port(IPv4Addr(ip_->daddr), tcp_->dest), IPv4Addr(ip_->saddr));
         }

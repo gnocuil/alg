@@ -40,7 +40,8 @@ private:
 class IP6Port {
 public:
     IP6Port();
-    IP6Port(const IPv6Addr& ip, uint16_t port);
+    IP6Port(const IPv6Addr& ip, uint16_t port);//port in NETWORK byte order
+    IP6Port(const IPv6Addr& ip, std::string port);//port in HOST byte order
     
     bool isNull() const;
     
@@ -64,6 +65,7 @@ public:
     
     IPv4Addr getIP() const;
     uint16_t getPort() const;
+    std::string getPortString() const;
     
     friend bool operator< (const IP4Port& a, const IP4Port& b);
     

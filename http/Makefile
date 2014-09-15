@@ -1,9 +1,12 @@
+CC        := g++
+CFLAGS    := --std=c++11 -O2
+
 all: lex.o parse.o
-	@echo http
-lex.o: lex.cc HTTPScanner.h HTTPScannerbase.h input.h HTTPParserbase.h
-	g++ -c lex.cc  --std=c++11
-parse.o: parse.cc HTTPParser.h HTTPParserbase.h input.hpp
-	g++ -c parse.cc  --std=c++11
+
+lex.o: lex.cc HTTPScanner.h HTTPScannerbase.h input.hpp input.h HTTPParserbase.h
+	$(CC) -c lex.cc  $(CFLAGS)
+parse.o: parse.cc HTTPParser.h HTTPParserbase.h 
+	$(CC) -c parse.cc  $(CFLAGS)
 HTTPScanner.h HTTPScannerbase.h lex.cc: lexer
 	flexc++ lexer
 HTTPParser.h HTTPParserbase.h parse.cc: grammar
@@ -11,4 +14,4 @@ HTTPParser.h HTTPParserbase.h parse.cc: grammar
 	
 	
 clean:
-	rm -f a.out lex.cc parse.cc HTTPScannerbase.h HTTPParserbase.h
+	rm -f *.o a.out lex.cc parse.cc HTTPScannerbase.h HTTPParserbase.h
