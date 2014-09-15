@@ -62,6 +62,14 @@ public:
     
     void setCurIPv6SrvAddr(const IPv6Addr& addr) {ip6srv_cur_=addr;}
     
+    //init configuration from a jason format file
+    void init(const std::string file);
+    
+    enum PROCESS_TYPE {
+        STATELESS = 0,
+        STATEFUL
+    };
+    
 private:
     std::queue<IP4Port> pool_;
     std::map<uint32_t, bool> map_pool_;
@@ -69,6 +77,9 @@ private:
     std::map<std::pair<IP4Port, IPv4Addr>, FlowPtr> map46_;
     IPv6Addr prefix_;
     IPv6Addr ip6srv_cur_;
+    
+    std::map<std::string, PROCESS_TYPE> ptype_c2s;
+    std::map<std::string, PROCESS_TYPE> ptype_s2c;
 };
 extern StateManager sm;
 

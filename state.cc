@@ -1,5 +1,8 @@
 #include <iostream>
 #include <cstdio>
+#include <boost/foreach.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include "state.h"
 
 using namespace std;
@@ -48,6 +51,46 @@ void Flow::addOffset(DEST dest, int delta)
         offset_c2s += delta;
     else
         offset_s2c += delta;
+}
+
+void StateManager::init(const std::string file)
+{
+    using boost::property_tree::ptree;
+    ptree pt;
+    ifstream fin(file);
+    if (!fin) {
+        cerr << "Failed reading configuration file: " << file << endl;
+        exit(0);
+    }
+    read_json(fin, pt);
+    fin.close();
+    
+    string prefix = pt.get<std::string>("IPv6Prefix");
+    sm.setIPv6Prefix(IPv6Addr(prefix));
+    string ip4 = pt.get<std::string>("IPv4Pool");
+    sm.addIPv4Pool(IPv4Addr(ip4));
+
+    BOOST_FOREACH(ptree::value_type &v, pt.get_child("Protocols")) {
+        string protocol = v.second.data();
+        ptype_c2s[protocol] = STATELESS;
+        ptype_s2c[protocol] = STATELESS;
+        try {
+            BOOST_FOREACH(ptree::value_type &w, pt.get_child(protocol)) {
+                if (string(w.first.data()) == "ServerToClient") {
+                    if (string(w.second.data()) == "stateful") {
+                        ptype_s2c[protocol] = STATEFUL;
+                    }
+                }
+                if (string(w.first.data()) == "ClientToServer") {
+                    if (string(w.second.data()) == "stateful") {
+                        ptype_c2s[protocol] = STATEFUL;
+                    }
+                }
+            }
+        } catch (const exception& ex) {
+        }
+    }
+    
 }
 
 void StateManager::addIPv4Pool(const IPv4Addr& ip)

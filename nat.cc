@@ -10,7 +10,7 @@ using namespace std;
 
 NAT nat;
 
-static void make_ip4pkt(u_int8_t* header, u_int16_t payload_len, const IPv4Addr& ip4saddr, const IPv4Addr& ip4daddr)
+static void make_ip4pkt(u_int8_t* header, u_int16_t payload_len, const IPv4Addr& ip4saddr, const IPv4Addr& ip4daddr, uint8_t protocol)
 {
     memset(header, 0, 20);
     iphdr* ip = (iphdr*)header;
@@ -21,14 +21,14 @@ static void make_ip4pkt(u_int8_t* header, u_int16_t payload_len, const IPv4Addr&
     ip->id = 0;
     ip->frag_off = 0;
     ip->ttl = 64;
-    ip->protocol = 0x06;
+    ip->protocol = protocol;
     ip->check = 0;
     
 	ip->daddr = ip4daddr.getInt();
     ip->saddr = ip4saddr.getInt();
 }
 
-static void make_ip6pkt(u_int8_t* header, u_int16_t payload_len, const IPv6Addr& ip6saddr, const IPv6Addr& ip6daddr)
+static void make_ip6pkt(u_int8_t* header, u_int16_t payload_len, const IPv6Addr& ip6saddr, const IPv6Addr& ip6daddr, uint8_t protocol)
 {
     memset(header, 0, 20);
     
@@ -36,7 +36,7 @@ static void make_ip6pkt(u_int8_t* header, u_int16_t payload_len, const IPv6Addr&
     ip6->ip6_flow = 0x60;
     ip6->ip6_plen = ntohs(payload_len);
     ip6->ip6_hops = 64;
-    ip6->ip6_nxt = 0x06;
+    ip6->ip6_nxt = protocol;
     
     ip6->ip6_src = ip6saddr.getIn6Addr();
     ip6->ip6_dst = ip6daddr.getIn6Addr();
@@ -51,11 +51,21 @@ int NAT::translate(PacketPtr pkt)
         if (!sm.isAddrInRange(pkt->getDest4()))
             return 0;
     }
-    if (!pkt->isTCP()) {
+    if (!pkt->isTCP() && !pkt->isUDP()) {
         return 0;
     }
     if (begin(pkt))
         return 0;
+    if (pkt->isUDP()) {
+        FILE *fout = fopen("udp.txt", "w");
+        udphdr* udp = pkt->getUDPHeader();
+        char *ch = (char*)udp;
+        for (int i = 8; i < pkt->getTransportLen(); ++i) {
+            fputc(ch[i], fout);
+        }
+        fclose(fout);
+        
+    }
     doApp(pkt);
     doSPort(pkt);
     doDPort(pkt);
@@ -71,14 +81,14 @@ int NAT::translate(PacketPtr pkt)
 
 int NAT::begin(PacketPtr pkt)
 {
-    tcphdr* tcp = pkt->getTCPHeader();//TODO: not tcp
+    //tcphdr* tcp = pkt->getTCPHeader();//TODO: not tcp
     if (pkt->getIPVersion() == 4) {
         ip6_hdr* ip6 = pkt->getIP6Header();
-        ip4p_ = sm.doMapping(IP6Port(IPv6Addr(ip6->ip6_src), tcp->source), IPv6Addr(ip6->ip6_dst))->ip4p;
+        ip4p_ = sm.doMapping(IP6Port(IPv6Addr(ip6->ip6_src), pkt->getSource()), IPv6Addr(ip6->ip6_dst))->ip4p;
         sm.setCurIPv6SrvAddr(IPv6Addr(ip6->ip6_dst));
     } else {
         iphdr* ip = pkt->getIPHeader();
-        FlowPtr f = sm.getMapping(IP4Port(IPv4Addr(ip->daddr), tcp->dest), IPv4Addr(ip->saddr));
+        FlowPtr f = sm.getMapping(IP4Port(IPv4Addr(ip->daddr), pkt->getDest()), IPv4Addr(ip->saddr));
         if (!f) return 1;
         ip6p_ = f->ip6p;
     }
@@ -87,9 +97,11 @@ int NAT::begin(PacketPtr pkt)
 
 void NAT::doSPort(PacketPtr pkt)
 {
-    tcphdr* tcp = pkt->getTCPHeader();//TODO: not tcp
+    tcphdr* tcp = pkt->getTCPHeader();
+    udphdr* udp = pkt->getUDPHeader();
     if (pkt->getIPVersion() == 4) {
-        tcp->source = ip4p_.getPort();
+        if (pkt->isTCP()) tcp->source = ip4p_.getPort();
+        if (pkt->isUDP()) udp->source = ip4p_.getPort();
     } else {
         //do nothing
     }
@@ -97,9 +109,11 @@ void NAT::doSPort(PacketPtr pkt)
 
 void NAT::doDPort(PacketPtr pkt)
 {
-    tcphdr* tcp = pkt->getTCPHeader();//TODO: not tcp
+    tcphdr* tcp = pkt->getTCPHeader();
+    udphdr* udp = pkt->getUDPHeader();
     if (pkt->getIPVersion() == 6) {
-        tcp->dest = ip6p_.getPort();
+        if (pkt->isTCP()) tcp->dest = ip6p_.getPort();
+        if (pkt->isUDP()) udp->dest = ip6p_.getPort();
     } else {
         //do nothing
     }
@@ -110,11 +124,11 @@ void NAT::doIP(PacketPtr pkt)
     if (pkt->getIPVersion() == 4) {
         ip6_hdr* ip6 = pkt->getIP6Header();
         IPv4Addr daddr = sm.getServerAddr(IPv6Addr(ip6->ip6_dst));
-        make_ip4pkt(pkt->obuf_, pkt->getTransportLen(), ip4p_.getIP(), daddr);
+        make_ip4pkt(pkt->obuf_, pkt->getTransportLen(), ip4p_.getIP(), daddr, ip6->ip6_nxt);
     } else {
         iphdr* ip = pkt->getIPHeader();
         IPv6Addr saddr = sm.getServerAddr(IPv4Addr(ip->saddr));
-        make_ip6pkt(pkt->obuf_, pkt->getTransportLen(), saddr, ip6p_.getIP());
+        make_ip6pkt(pkt->obuf_, pkt->getTransportLen(), saddr, ip6p_.getIP(), ip->protocol);
     }
 }
 
@@ -172,7 +186,7 @@ int NAT::modify(PacketPtr pkt, std::vector<Operation>& ops)
 }
 
 void NAT::doApp(PacketPtr pkt)
-{
+{if (!pkt->isTCP())return;
     DEST dest = pkt->getDEST();
     
 	tcphdr* tcp = pkt->getTCPHeader();

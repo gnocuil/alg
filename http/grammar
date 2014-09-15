@@ -45,7 +45,7 @@ attribute: TAG_IDENT_HREF '=' url
     | TAG_IDENT '=' ATT_VALUE
 ;
 url: URL_NAME ':' '/' '/' INTEGER '.' INTEGER '.' INTEGER '.' INTEGER '/' {
-        reportIP($5 + "." + $7 + "." + $9 + "." + $11, $5.pos, $11.pos_end);
+        reportIP(($5 + "." + $7 + "." + $9 + "." + $11).s, $5.pos, $11.pos_end);
     } url_trailing
     | error
 ;

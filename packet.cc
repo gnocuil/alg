@@ -102,6 +102,11 @@ void Packet::handleTransportLayer(int offset, int offset_old, int protocol)
     case IPPROTO_TCP:
         tcp_ = (tcphdr*)(obuf_ + offset);
         tcp_old_ = (tcphdr*)(ibuf_ + offset_old);
+        break;
+    case IPPROTO_UDP:
+        udp_ = (udphdr*)(obuf_ + offset);
+        udp_old_ = (udphdr*)(ibuf_ + offset_old);
+        break;
     default:
         //TODO
         ;
@@ -117,11 +122,14 @@ void Packet::setTransportLen(int len)
 void Packet::updateChecksum()
 {
     if (tcp_) tcp_->check = 0;
+    if (udp_) udp_->check = 0;
     if (ipVersionBefore_ == 6) {
         if (tcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip_->saddr), &(ip_->daddr), 4);
+        if (udp_) udp_->check = tcp_checksum(udp_, transport_len_, &(ip_->saddr), &(ip_->daddr), 4);
         ip_->check = ip_checksum(ip_, transport_len_ + 20);
     } else {
         if (tcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip6_->ip6_src), &(ip6_->ip6_dst), 16);
+        if (udp_) udp_->check = tcp_checksum(udp_, transport_len_, &(ip6_->ip6_src), &(ip6_->ip6_dst), 16);
     }
 }
 
@@ -136,6 +144,22 @@ FlowPtr Packet::getFlow() {
         }
     }
     return ret;
+}
+
+u_int16_t Packet::getSource() const {
+    if (tcp_)
+        return tcp_->source;
+    if (udp_)
+        return udp_->source;
+    return 0;//TODO: throw?
+}
+
+u_int16_t Packet::getDest() const {
+    if (tcp_)
+        return tcp_->dest;
+    if (udp_)
+        return udp_->dest;
+    return 0;//TODO: throw?
 }
 
 void Packet::print()

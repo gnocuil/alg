@@ -1,0 +1,11 @@
+%class-name SIPParser
+%scanner SIPScanner.h
+%scanner-class-name SIPScanner
+%scanner-token-function d_scanner.lex()
+%baseclass-preinclude tokentype.h
+
+%stype TokenType
+%token INT 
+%%
+
+

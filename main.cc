@@ -26,9 +26,7 @@ int main(int argc, char **argv)
 
     sigaction(SIGINT, &s, &t);
 
-
-    sm.addIPv4Pool(IPv4Addr("10.20.30.40"));
-    sm.setIPv6Prefix(IPv6Addr("2002::0"));
+    sm.init("example.conf");
 	init_socket();
 	int rv;
 	char buf[4096] __attribute__ ((aligned));
