@@ -52,15 +52,17 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 }
 
 static void iptables_start()
-{puts("ipt start");
-    system("ip6tables -t raw -A PREROUTING -j NFQUEUE --queue-num 0");
-    system("iptables -t raw -A PREROUTING -j NFQUEUE --queue-num 0");
+{
+    int ret;
+    ret = system("ip6tables -t raw -A PREROUTING -j NFQUEUE --queue-num 0");
+    ret = system("iptables -t raw -A PREROUTING -j NFQUEUE --queue-num 0");
 }
 
 static void iptables_stop()
-{puts("ipt stop");
-    system("ip6tables -t raw -D PREROUTING -j NFQUEUE --queue-num 0");
-    system("iptables -t raw -D PREROUTING -j NFQUEUE --queue-num 0");
+{
+    int ret;
+    ret = system("ip6tables -t raw -D PREROUTING -j NFQUEUE --queue-num 0");
+    ret = system("iptables -t raw -D PREROUTING -j NFQUEUE --queue-num 0");
 }
 
 int nfqueue_init()

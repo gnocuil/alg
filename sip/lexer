@@ -1,5 +1,64 @@
 %class-name = "SIPScanner"
-%x 
+%x header header_via header_contact body sdp_value
 %%
 
+^[^ \r\n]*      return SIPParser::METHOD;
+[^ \r\n]*       return SIPParser::TEXT;
+[ ]             ;
+\r\n            begin(StartCondition__::header);return SIPParser::CRLF;
+
+<header>{
+    ^\r\n                 begin(StartCondition__::body); return SIPParser::CRLF;
+    ^[a-zA-Z\-]+          {
+        if (matched() == "Via") {
+            nxt = StartCondition__::header_via;
+            return SIPParser::HEADER_IDENT_VIA;
+        }
+        if (matched() == "Contact") {
+            nxt = StartCondition__::header_contact;
+            return SIPParser::HEADER_IDENT_CONTACT;
+        }
+        nxt = StartCondition__::header;
+        return SIPParser::HEADER_IDENT;
+    }
+    \:                    begin(nxt);return matched()[0];
+    [ \t]*                ;
+    [^\:\n \t\r][^\n\r]*  return SIPParser::HEADER_VALUE;
+    \r\n                  return SIPParser::CRLF;
+}
+
+<header_via>{
+    [^ \t\[\]\:\;\r\n]+   return SIPParser::TEXT;
+    \[[^\]]+\]            return SIPParser::IP6ADDR;
+    \r\n                  begin(StartCondition__::header);return SIPParser::CRLF;
+    .                      ;
+}
+
+<header_contact>{
+    [\<\>]                ;
+    [^ \t\[\]\:\r\n\@]+   return SIPParser::TEXT;
+    \[[^\]]+\]            return SIPParser::IP6ADDR;
+    \r\n                  begin(StartCondition__::header);return SIPParser::CRLF;
+    [\:\@]                return matched()[0];
+    .                     ;
+}
+
+<body>{
+    ^[a-z]                {
+        if (matched()[0] == 'c') {
+            return SIPParser::CHAR_c;
+        }
+        if (matched()[0] == 'm') {
+            return SIPParser::CHAR_m;
+        }
+        return SIPParser::CHAR;
+    }
+    \=                    begin(StartCondition__::sdp_value);return matched()[0];
+}
+
+<sdp_value>{
+    [^\r\n ]*             return SIPParser::TEXT;
+    \r\n                  begin(StartCondition__::body);return SIPParser::CRLF;
+    [ ]                   ;
+}
 

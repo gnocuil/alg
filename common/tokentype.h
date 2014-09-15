@@ -21,6 +21,9 @@ public:
     friend TokenType operator+ (const TokenType& a, const TokenType& b) {
         return TokenType(a.s + b.s, a.pos, b.pos_end);
     }
+    int Int() {
+        return atoi(s.c_str());
+    }
 //private:
     std::string s;
     int pos;
