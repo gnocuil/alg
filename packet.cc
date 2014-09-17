@@ -117,6 +117,9 @@ void Packet::setTransportLen(int len)
 {
     transport_len_ = len;
     obuf_len_ = ip_len_ + transport_len_;
+    if (udp_) {
+        udp_->len = ntohs((u_int16_t)len);
+    }
 }
 
 void Packet::updateChecksum()
@@ -138,15 +141,20 @@ FlowPtr Packet::getFlow() {
     if (tcp_) {
         if (ipVersionBefore_ == 6) {
             ret = sm.getMapping(IP6Port(IPv6Addr(ip6_->ip6_src), tcp_->source), IPv6Addr(ip6_->ip6_dst));
-//            cout << "getFlow6: " << IP6Port(IPv6Addr(ip6_->ip6_src), tcp_->source) << endl;
         } else {
             ret = sm.getMapping(IP4Port(IPv4Addr(ip_->daddr), tcp_->dest), IPv4Addr(ip_->saddr));
+        }
+    } else if (udp_) {
+        if (ipVersionBefore_ == 6) {
+            ret = sm.getMapping(IP6Port(IPv6Addr(ip6_->ip6_src), udp_->source), IPv6Addr(ip6_->ip6_dst));
+        } else {
+            ret = sm.getMapping(IP4Port(IPv4Addr(ip_->daddr), udp_->dest), IPv4Addr(ip_->saddr));
         }
     }
     return ret;
 }
 
-u_int16_t Packet::getSource() const {
+u_int16_t Packet::getSourcePort() const {
     if (tcp_)
         return tcp_->source;
     if (udp_)
@@ -154,12 +162,20 @@ u_int16_t Packet::getSource() const {
     return 0;//TODO: throw?
 }
 
-u_int16_t Packet::getDest() const {
+u_int16_t Packet::getDestPort() const {
     if (tcp_)
         return tcp_->dest;
     if (udp_)
         return udp_->dest;
     return 0;//TODO: throw?
+}
+
+int Packet::getTransportHeaderLen() const {
+    if (tcp_)
+        return tcp_->th_off * 4;
+    if (udp_)
+        return 8;
+    return 0;
 }
 
 void Packet::print()
@@ -171,7 +187,7 @@ void Packet::print()
     }
     */
     if (tcp_) {
-        int hl = getTCPHeaderLen();
+        int hl = getTransportHeaderLen();
         int tl = getTransportLen();
         if (hl < tl) {
             putchar('\n');

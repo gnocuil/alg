@@ -56,16 +56,6 @@ int NAT::translate(PacketPtr pkt)
     }
     if (begin(pkt))
         return 0;
-    if (pkt->isUDP()) {
-        FILE *fout = fopen("udp.txt", "w");
-        udphdr* udp = pkt->getUDPHeader();
-        char *ch = (char*)udp;
-        for (int i = 8; i < pkt->getTransportLen(); ++i) {
-            fputc(ch[i], fout);
-        }
-        fclose(fout);
-        
-    }
     doApp(pkt);
     doSPort(pkt);
     doDPort(pkt);
@@ -84,11 +74,11 @@ int NAT::begin(PacketPtr pkt)
     //tcphdr* tcp = pkt->getTCPHeader();//TODO: not tcp
     if (pkt->getIPVersion() == 4) {
         ip6_hdr* ip6 = pkt->getIP6Header();
-        ip4p_ = sm.doMapping(IP6Port(IPv6Addr(ip6->ip6_src), pkt->getSource()), IPv6Addr(ip6->ip6_dst))->ip4p;
+        ip4p_ = sm.doMapping(IP6Port(IPv6Addr(ip6->ip6_src), pkt->getSourcePort()), IPv6Addr(ip6->ip6_dst))->ip4p;
         sm.setCurIPv6SrvAddr(IPv6Addr(ip6->ip6_dst));
     } else {
         iphdr* ip = pkt->getIPHeader();
-        FlowPtr f = sm.getMapping(IP4Port(IPv4Addr(ip->daddr), pkt->getDest()), IPv4Addr(ip->saddr));
+        FlowPtr f = sm.getMapping(IP4Port(IPv4Addr(ip->daddr), pkt->getDestPort()), IPv4Addr(ip->saddr));
         if (!f) return 1;
         ip6p_ = f->ip6p;
     }
@@ -143,12 +133,18 @@ int NAT::modify(PacketPtr pkt, std::vector<Operation>& ops)
         return 0;
     sort(ops.begin(), ops.end());
     int len = pkt->getTransportLen();
-	int hl = pkt->getTCPHeaderLen();
+	int hl = pkt->getTransportHeaderLen();
 	len -= hl;
-	tcphdr* tcp = pkt->getTCPHeader();
-	tcphdr* tcp_old = pkt->getIbufTCPHeader();
-	char *d = (char*)tcp + hl;
-	char *s = (char*)tcp_old + hl;
+	char *d, *s;
+	if (pkt->isTCP()) {
+	    d = (char*)pkt->getTCPHeader() + hl;
+    	s = (char*)pkt->getIbufTCPHeader() + hl;
+    } else if (pkt->isUDP()) {
+	    d = (char*)pkt->getUDPHeader() + hl;
+    	s = (char*)pkt->getIbufUDPHeader() + hl;
+    } else {
+        return 0;
+    }
 	int len_old = len;
 	for (int i = 0; i < ops.size(); ++i) {
 	    printf("replace : %d %d [", ops[i].start_pos, ops[i].end_pos);
@@ -186,34 +182,38 @@ int NAT::modify(PacketPtr pkt, std::vector<Operation>& ops)
 }
 
 void NAT::doApp(PacketPtr pkt)
-{if (!pkt->isTCP())return;
+{
     DEST dest = pkt->getDEST();
     
 	tcphdr* tcp = pkt->getTCPHeader();
+	udphdr* udp = pkt->getUDPHeader();
 	int len = pkt->getTransportLen();
-	int hl = pkt->getTCPHeaderLen();
-	
+	int hl = pkt->getTransportHeaderLen();
 	FlowPtr flow = pkt->getFlow();
 	if (!flow) return;
-	
-	int offsetc2s = flow->getOffset(SERVER);
-	int offsets2c = flow->getOffset(CLIENT);
-    if (dest == SERVER) {
-        tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsetc2s);
-	    tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsets2c);
-	} else {
-	    tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsetc2s);
-        tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsets2c);
+	if (tcp) {
+	    int offsetc2s = flow->getOffset(SERVER);
+	    int offsets2c = flow->getOffset(CLIENT);
+        if (dest == SERVER) {
+            tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsetc2s);
+	        tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsets2c);
+	    } else {
+	        tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsetc2s);
+            tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsets2c);
+	    }
 	}
-
 	if (len > hl && !flow->ignored()) {
-	    string str((char*)tcp + hl, (char*)tcp + len);
-	    ParserPtr parser = flow->getParser("ftp", dest);
+	    string content;
+	    if (tcp)
+	        content = string((char*)tcp + hl, (char*)tcp + len);
+	    else if (udp)
+	        content = string((char*)udp + hl, (char*)udp + len);
+	    ParserPtr parser = flow->getParser("sip", dest);
 	    if (parser) {
-	        cout << "found parser! " << flow << endl;
-	        std::vector<Operation> ret = parser->process(str);
+	        cout << "found sip parser! " << flow << endl;
+	        std::vector<Operation> ret = parser->process(content);
 	        if (ret.size() > 0) {
-	            printf("received %d operations!\n", ret.size());
+	            cout << "received " << ret.size() << "operations!\n";
 	            int delta = modify(pkt, ret);
 	            flow->addOffset(dest, delta);
 	            

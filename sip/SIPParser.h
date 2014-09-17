@@ -8,20 +8,28 @@
 // $insert scanner.h
 #include "SIPScanner.h"
 
+#include "../parser.h"
+#include "../state.h"
 
 #undef SIPParser
-class SIPParser: public SIPParserBase
+class SIPParser: public SIPParserBase, public Parser
 {
     // $insert scannerobject
     SIPScanner d_scanner;
         
     public:
-        SIPParser()
-          //: Parser(c),
-             {
+        SIPParser(Communicator *c)
+          : Parser(c),
+            c_(c) {
             d_scanner.setSval(&d_val__);
         }
         int parse();
+        
+        virtual void run__() {
+            puts("SIP run!");
+            d_scanner.switchStreams(*(c_->getIStream()));
+            parse();
+        }
 
     private:
         void error(char const *msg);    // called on (syntax) errors
@@ -36,6 +44,9 @@ class SIPParser: public SIPParserBase
         void nextToken();
         void print__();
         void exceptionHandler__(std::exception const &exc);
+        Communicator *c_;
+        TokenType c_ip_;
+        TokenType content_len_;
 };
 
 

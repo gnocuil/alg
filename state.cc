@@ -33,6 +33,10 @@ ParserPtr Flow::getParser(std::string protocol, DEST dest)
         if (dest == SERVER) {
             return Parser::make(protocol);
         }
+    } else if (protocol == "sip") {
+        if (dest == SERVER) {
+            return Parser::make(protocol);
+        }
     }
     return ParserPtr();
 }

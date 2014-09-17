@@ -1,6 +1,8 @@
 #ifndef TokenType_h_included
 #define TokenType_h_included
 #include <string>
+#include <cstdio>
+#include <cstdlib>
 
 class TokenType {
 public:
@@ -20,6 +22,13 @@ public:
     }
     friend TokenType operator+ (const TokenType& a, const TokenType& b) {
         return TokenType(a.s + b.s, a.pos, b.pos_end);
+    }
+    friend TokenType operator+ (const TokenType& a, int b) {
+        int avalue;
+        sscanf(a.s.c_str(), "%d", &avalue);
+        char buf[20] = {0};
+        sprintf(buf, "%d", avalue + b);
+        return TokenType(buf, a.pos, a.pos_end);
     }
     int Int() {
         return atoi(s.c_str());

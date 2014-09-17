@@ -49,7 +49,11 @@ IPv6Addr::IPv6Addr(const in6_addr& ip)
 
 IPv6Addr::IPv6Addr(const std::string& ip)
 {
-    inet_pton(AF_INET6, ip.c_str(), &ip_);
+    if (ip.size() > 2 && ip[0] == '[' && ip[ip.size() - 1] == ']') {
+        string tmp = ip.substr(1, ip.size() - 2);
+        inet_pton(AF_INET6, tmp.c_str(), &ip_);    
+    } else
+        inet_pton(AF_INET6, ip.c_str(), &ip_);
 }
 
 std::string IPv6Addr::getString() const

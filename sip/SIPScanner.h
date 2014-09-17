@@ -41,12 +41,14 @@ class SIPScanner: public SIPScannerBase
 // $insert scannerConstructors
 inline SIPScanner::SIPScanner(std::istream &in, std::ostream &out)
 :
-    SIPScannerBase(in, out)
+    SIPScannerBase(in, out),
+    cnt(0)
 {}
 
 inline SIPScanner::SIPScanner(std::string const &infile, std::string const &outfile)
 :
-    SIPScannerBase(infile, outfile)
+    SIPScannerBase(infile, outfile),
+    cnt(0)
 {}
 
 // $insert inlineLexFunction

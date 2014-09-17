@@ -2,6 +2,7 @@
 #include "packet.h"
 #include "http/HTTPParser.h"
 #include "ftp/FTPParser.h"
+#include "sip/SIPParser.h"
 
 using namespace std;
 
@@ -29,6 +30,9 @@ ParserPtr Parser::make(std::string protocol) {
     } else if (protocol == "ftp") {
         ParserPtr p = ParserPtr(new FTPParser(new StatelessCommunicator()));
         return p;
+    } else if (protocol == "sip") {
+        ParserPtr p = ParserPtr(new SIPParser(new StatelessCommunicator()));
+        return p;
     }
     return ParserPtr();
 }
@@ -50,14 +54,26 @@ void Parser::addOperation(const Operation& op) {
     }
 }
 
-void Parser::addOperation(int startPos, int endPos, Operation::OP operation, const std::string newdata)
-{
+void Parser::addOperation(int startPos, int endPos, Operation::OP operation, const std::string newdata, bool count) {
     Operation op;
     op.start_pos = startPos;
     op.end_pos = endPos;
     op.op = operation;
     op.newdata = newdata;
+    op.cnt = count;
     addOperation(op);
+}
+
+void Parser::addOperation(TokenType token, Operation::OP operation, const std::string newdata, bool count) {
+    addOperation(token.pos, token.pos_end, operation, newdata, count);
+}
+
+int Parser::totalDelta() const {
+    int delta = 0;
+    for (int i = 0; i < ops.size(); ++i) if (ops[i].cnt) {
+        delta += ops[i].newdata.size() - (ops[i].end_pos - ops[i].start_pos);
+    }
+    return delta;
 }
 
 bool operator<(const Operation& a, const Operation& b) {

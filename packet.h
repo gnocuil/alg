@@ -28,10 +28,11 @@ public:
     ip6_hdr* getIP6Header() const { return ip6_; }
     bool isTCP() const { return tcp_ ? true : false; }
     bool isUDP() const { return udp_ ? true : false; }
-    int getTCPHeaderLen() const { return tcp_ ? tcp_->th_off * 4 : 0; }
+    int getTransportHeaderLen() const;
     tcphdr* getTCPHeader() const { return tcp_; }
     tcphdr* getIbufTCPHeader() const { return tcp_old_; }
     udphdr* getUDPHeader() const { return udp_; }
+    udphdr* getIbufUDPHeader() const { return udp_old_; }
     int getTransportLen() const { return transport_len_; }
     int getIPVersion() const { return ipVersionBefore_ == 4 ? 6 : 4; }
     
@@ -44,8 +45,8 @@ public:
     DEST getDEST() const { return ipVersionBefore_ == 4 ? CLIENT : SERVER; }
     FlowPtr getFlow();
     
-    u_int16_t getSource() const;
-    u_int16_t getDest() const;
+    u_int16_t getSourcePort() const;
+    u_int16_t getDestPort() const;
     
     void print();
     
