@@ -6,7 +6,7 @@
 
 using namespace std;
 
-static uint16_t tcp_checksum(const void *tcphead, size_t tcplen, const void* saddr, const void*  daddr, int addrlen)
+static uint16_t tcp_checksum(const void *tcphead, size_t tcplen, const void* saddr, const void*  daddr, int addrlen, uint8_t protocol)
 {
     const uint16_t *buf = (uint16_t*)tcphead;
     uint16_t *ip_src = (uint16_t*)saddr, *ip_dst = (uint16_t*)daddr;
@@ -31,7 +31,7 @@ static uint16_t tcp_checksum(const void *tcphead, size_t tcplen, const void* sad
         sum += *(ip_src++);
         sum += *(ip_dst++);
     }
-    sum += htons(IPPROTO_TCP);
+    sum += htons(protocol);
     sum += htons(tcplen);
 
     // Add the carries                                              //
@@ -127,12 +127,12 @@ void Packet::updateChecksum()
     if (tcp_) tcp_->check = 0;
     if (udp_) udp_->check = 0;
     if (ipVersionBefore_ == 6) {
-        if (tcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip_->saddr), &(ip_->daddr), 4);
-        if (udp_) udp_->check = tcp_checksum(udp_, transport_len_, &(ip_->saddr), &(ip_->daddr), 4);
+        if (tcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip_->saddr), &(ip_->daddr), 4, IPPROTO_TCP);
+        if (udp_) udp_->check = tcp_checksum(udp_, transport_len_, &(ip_->saddr), &(ip_->daddr), 4, IPPROTO_UDP);
         ip_->check = ip_checksum(ip_, transport_len_ + 20);
     } else {
-        if (tcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip6_->ip6_src), &(ip6_->ip6_dst), 16);
-        if (udp_) udp_->check = tcp_checksum(udp_, transport_len_, &(ip6_->ip6_src), &(ip6_->ip6_dst), 16);
+        if (tcp_) tcp_->check = tcp_checksum(tcp_, transport_len_, &(ip6_->ip6_src), &(ip6_->ip6_dst), 16, IPPROTO_TCP);
+        if (udp_) udp_->check = tcp_checksum(udp_, transport_len_, &(ip6_->ip6_src), &(ip6_->ip6_dst), 16, IPPROTO_UDP);
     }
 }
 

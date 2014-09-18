@@ -12,6 +12,9 @@ class TokenType;
 
 class Operation {
 public:
+    Operation()
+        : cnt(false)
+    {}
     enum OP {
         REPLACE
     };
