@@ -75,24 +75,32 @@ void StateManager::init(const std::string file)
     sm.addIPv4Pool(IPv4Addr(ip4));
 
     BOOST_FOREACH(ptree::value_type &v, pt.get_child("Protocols")) {
-        string protocol = v.second.data();
-        ptype_c2s[protocol] = STATELESS;
-        ptype_s2c[protocol] = STATELESS;
+        string protocolName = v.second.data();
+        Protocol protocol;
         try {
-            BOOST_FOREACH(ptree::value_type &w, pt.get_child(protocol)) {
+            BOOST_FOREACH(ptree::value_type &w, pt.get_child(protocolName)) {
                 if (string(w.first.data()) == "ServerToClient") {
                     if (string(w.second.data()) == "stateful") {
-                        ptype_s2c[protocol] = STATEFUL;
+                        protocol.ptype_s2c = STATEFUL;
+                    } else if (string(w.second.data()) == "none") {
+                        protocol.ptype_s2c = NONE;
                     }
                 }
                 if (string(w.first.data()) == "ClientToServer") {
                     if (string(w.second.data()) == "stateful") {
-                        ptype_c2s[protocol] = STATEFUL;
+                        protocol.ptype_c2s = STATEFUL;
+                    } else if (string(w.second.data()) == "none") {
+                        protocol.ptype_c2s = NONE;
                     }
+                }
+                if (string(w.first.data()) == "Protocol") {
+                    protocol.protocol = string(w.second.data());
                 }
             }
         } catch (const exception& ex) {
         }
+        std::cout << "add Protocol: " << protocolName << " " << protocol.protocol << std::endl;
+        protocols[protocolName] = protocol;
     }
     
 }

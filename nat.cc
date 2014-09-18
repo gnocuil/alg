@@ -202,24 +202,49 @@ void NAT::doApp(PacketPtr pkt)
             tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsets2c);
 	    }
 	}
-	if (len > hl && !flow->ignored()) {
-	    string content;
-	    if (tcp)
-	        content = string((char*)tcp + hl, (char*)tcp + len);
-	    else if (udp)
-	        content = string((char*)udp + hl, (char*)udp + len);
-	    ParserPtr parser = flow->getParser("sip", dest);
-	    if (parser) {
-	        cout << "found sip parser! " << flow << endl;
-	        std::vector<Operation> ret = parser->process(content);
-	        if (ret.size() > 0) {
-	            cout << "received " << ret.size() << "operations!\n";
-	            int delta = modify(pkt, ret);
-	            flow->addOffset(dest, delta);
-	            
-	            
-	        }
-	    }
+	if (len <= hl || flow->ignored())
+	    return;
+	string content;
+	if (tcp)
+	    content = string((char*)tcp + hl, (char*)tcp + len);
+	else if (udp)
+	    content = string((char*)udp + hl, (char*)udp + len);
+	if (content.size() <= 0)
+	    return;
+	string protocol = flow->getProtocol();
+	vector<Operation> ops;
+//	string chosenProtocol;
+	if (protocol.size() == 0) {
+        std::map<std::string, StateManager::Protocol>::iterator it;
+        for (it = sm.protocols.begin(); it != sm.protocols.end(); it++) {
+            //check protocol 
+            if (it->second.protocol == "tcp" && !pkt->isTCP())
+                continue;
+            if (it->second.protocol == "udp" && !pkt->isUDP())
+                continue;
+            cout << it->first << " " << it->second.protocol << endl;            
+            ParserPtr parser = flow->getParser(it->first, dest);
+            if (parser) {
+                cout << "found " << it->first << "parser! try for flow " << flow << endl;
+                ops = parser->process(content);
+                if (ops.size() > 0) {
+//                    chosenProtocol = it->first;
+                    flow->setProtocol(it->first);
+                    break;
+                }
+            }
+        }
+	} else {
+	    std::cout << "flow " << flow << " 's protocol=" << protocol << std::endl;
+	    ParserPtr parser = flow->getParser(protocol, dest);
+        if (parser) {
+            ops = parser->process(content);
+        }
+	}
+	if (ops.size() > 0) {
+        cout << "ops.size " << ops.size() << "operations!\n";
+	    int delta = modify(pkt, ops);
+	    flow->addOffset(dest, delta);
 	}
 }
 

@@ -19,7 +19,8 @@ public:
           ip4srv(ip4srv_),
           offset_c2s(0),
           offset_s2c(0),
-          ignore_(false) {}
+          ignore_(false),
+          protocol("") {}
     friend std::ostream& operator<< (std::ostream& os, const Flow &f);
     int getOffset(DEST dest);
     void addOffset(DEST dest, int delta);
@@ -28,6 +29,9 @@ public:
     
     void setIgnore() {ignore_ = true;}
     bool ignored() {return ignore_;}
+    
+    void setProtocol(std::string protocol_) {protocol = protocol_;}
+    std::string getProtocol() const {return protocol;}
     
 //private:
     IP6Port ip6p;
@@ -39,6 +43,7 @@ private:
     int offset_s2c;
     ParserPtr https2c;
     bool ignore_;
+    std::string protocol;
 };
 
 typedef boost::shared_ptr<Flow> FlowPtr;
@@ -67,7 +72,20 @@ public:
     
     enum PROCESS_TYPE {
         STATELESS = 0,
-        STATEFUL
+        STATEFUL,
+        NONE
+    };
+    
+    class Protocol {
+    public:
+        Protocol()
+          : protocol("tcp"),
+            ptype_c2s(STATELESS),
+            ptype_s2c(STATELESS)
+          {}
+        std::string protocol;
+        PROCESS_TYPE ptype_c2s;
+        PROCESS_TYPE ptype_s2c;
     };
     
 private:
@@ -78,8 +96,8 @@ private:
     IPv6Addr prefix_;
     IPv6Addr ip6srv_cur_;
     
-    std::map<std::string, PROCESS_TYPE> ptype_c2s;
-    std::map<std::string, PROCESS_TYPE> ptype_s2c;
+public:
+    std::map<std::string, Protocol> protocols;
 };
 extern StateManager sm;
 
