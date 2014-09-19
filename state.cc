@@ -21,21 +21,22 @@ std::ostream& operator<< (std::ostream& os, const FlowPtr &f)
 }
 
 ParserPtr Flow::getParser(std::string protocol, DEST dest)
-{
-    if (protocol == "http") {
-        if (dest == CLIENT) {
-            if (!https2c) {
-                https2c = Parser::make(protocol);
-            }
-            return https2c;
+{   
+    if (dest == CLIENT) {
+        switch (sm.protocols[protocol].ptype_s2c) {
+        case StateManager::STATELESS:
+            return Parser::make(protocol, new StatelessCommunicator());
+        case StateManager::STATEFUL:
+        default://NONE
+            ;
         }
-    } else if (protocol == "ftp") {
-        if (dest == SERVER) {
-            return Parser::make(protocol);
-        }
-    } else if (protocol == "sip") {
-        if (dest == SERVER) {
-            return Parser::make(protocol);
+    } else {
+        switch (sm.protocols[protocol].ptype_s2c) {
+        case StateManager::STATELESS:
+            return Parser::make(protocol, new StatelessCommunicator());
+        case StateManager::STATEFUL:
+        default://NONE
+            ;
         }
     }
     return ParserPtr();

@@ -37,7 +37,7 @@ public:
     std::vector<Operation> process(const std::string& data);
     
     static void run(Communicator *c);
-    static ParserPtr make(std::string protocol);
+    static ParserPtr make(std::string protocol, Communicator *c);
     
     virtual void run__() = 0;
     

@@ -3,6 +3,7 @@
 #include "http/HTTPParser.h"
 #include "ftp/FTPParser.h"
 #include "sip/SIPParser.h"
+#include "parser_make.h"
 
 using namespace std;
 
@@ -21,20 +22,6 @@ void Parser::run(Communicator *c) {
     if (p) {
         p->run__();
     }
-}
-
-ParserPtr Parser::make(std::string protocol) {
-    if (protocol == "http") {
-        ParserPtr p = ParserPtr(new HTTPParser(new StatefulCommunicator()));
-        return p;
-    } else if (protocol == "ftp") {
-        ParserPtr p = ParserPtr(new FTPParser(new StatelessCommunicator()));
-        return p;
-    } else if (protocol == "sip") {
-        ParserPtr p = ParserPtr(new SIPParser(new StatelessCommunicator()));
-        return p;
-    }
-    return ParserPtr();
 }
 
 std::vector<Operation> Parser::process(const std::string& data) {
