@@ -21,6 +21,8 @@ public:
           offset_s2c(0),
           ignore_(false),
           protocol("") {}
+          
+    ~Flow() {std::cout << "Delete " << *this << std::endl;}
     friend std::ostream& operator<< (std::ostream& os, const Flow &f);
     int getOffset(DEST dest);
     void addOffset(DEST dest, int delta);
@@ -33,6 +35,8 @@ public:
     void setProtocol(std::string protocol_) {protocol = protocol_;}
     std::string getProtocol() const {return protocol;}
     
+    void save(std::string content);
+    
 //private:
     IP6Port ip6p;
     IPv6Addr ip6srv;
@@ -44,6 +48,8 @@ private:
     ParserPtr https2c;
     bool ignore_;
     std::string protocol;
+    std::map<std::string, ParserPtr> parsers_c2s;
+    std::map<std::string, ParserPtr> parsers_s2c;
 };
 
 typedef boost::shared_ptr<Flow> FlowPtr;

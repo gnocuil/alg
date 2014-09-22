@@ -19,13 +19,24 @@ class HTTPParser: public HTTPParserBase, public Parser
     public:
         HTTPParser(Communicator *c)
           : Parser(c),
-            d_scanner(c) {
+            d_scanner(c->getAddrIStream()) {
             d_scanner.setSval(&d_val__);
         }
         int parse();
         
-        virtual void run__() {
+        virtual void run__() {puts("http run__!");
             parse();
+        }
+        virtual std::string getContentLengthExceed(std::string content) {
+            std::cout << "http::getCLE:" << content << std::endl;
+            std::ostringstream os;
+            if (content.size() > 0) {
+                os << "\r\n" << std::hex << content.size() << "\r\n" << content << "\r\n0\r\n\r\n";
+            } else {
+                os << "\r\n0\r\n\r\n";
+            }
+            std::cout<<"http::getCLE result:"<<os.str()<<std::endl;
+            return os.str();
         }
 
     private:
@@ -68,6 +79,9 @@ class HTTPParser: public HTTPParserBase, public Parser
                 addOperation(op);
             }
         }
+        bool chunked;
+        int len;
+        
 };
 
 

@@ -55,12 +55,18 @@ int NAT::translate(PacketPtr pkt)
         return 0;
     }
     if (begin(pkt))
-        return 0;
-    doApp(pkt);
+        return 0;puts("nat.cc line#58");
+    try {
+        doApp(pkt);
+    } catch (const std::exception& ex) {
+        cerr << "Exception in doApp: " << ex.what() << endl;
+    } catch (...) {
+        cerr << "Exception in doApp: ..." << endl;
+    }
     doSPort(pkt);
     doDPort(pkt);
     doIP(pkt);
-    finish(pkt);
+    finish(pkt);puts("nat.cc line#63");
     if (pkt->hw_protocol == ETHERTYPE_IPV6) {
         socket4.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest4());
     } else {
@@ -127,7 +133,7 @@ void NAT::finish(PacketPtr pkt)
     pkt->updateChecksum();
 }
 
-int NAT::modify(PacketPtr pkt, std::vector<Operation>& ops)
+int NAT::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 {
     if (ops.size() == 0)
         return 0;
@@ -177,6 +183,28 @@ int NAT::modify(PacketPtr pkt, std::vector<Operation>& ops)
 	        d[pd] = s[ps++];
 	    }
 	}
+	
+	int maxPos = parser->maxPos;//check max length
+	if (maxPos > 0) {
+	    for (int i = 0; i < ops.size(); ++i) {
+	        if (ops[i].end_pos <= parser->maxPos) {
+        	    int delta = ops[i].newdata.size() - (ops[i].end_pos - ops[i].start_pos);
+	            maxPos += delta;
+	        }
+	    }
+	    maxPos += parser->maxLen;
+	}
+	
+	if (maxPos > 0 && maxPos <= len) {//TODO: absolute offset
+	    cout << "translate: len=" << len << " maxPos=" << maxPos << endl;
+	    string oldcontent = string(d + maxPos, len - maxPos);
+	    string newcontent = parser->getContentLengthExceed(oldcontent);
+	    if (newcontent != oldcontent) {
+	        memcpy(d + maxPos, newcontent.c_str(), newcontent.size());
+	        len = len - oldcontent.size() + newcontent.size();
+	    }
+	}
+	
 	pkt->setTransportLen(len + hl);
 	return len - len_old;
 }
@@ -211,9 +239,11 @@ void NAT::doApp(PacketPtr pkt)
 	    content = string((char*)udp + hl, (char*)udp + len);
 	if (content.size() <= 0)
 	    return;
+//	flow->save(content);
 	string protocol = flow->getProtocol();
 	vector<Operation> ops;
 //	string chosenProtocol;
+    ParserPtr parser;
 	if (protocol.size() == 0) {
         std::map<std::string, StateManager::Protocol>::iterator it;
         for (it = sm.protocols.begin(); it != sm.protocols.end(); it++) {
@@ -221,29 +251,30 @@ void NAT::doApp(PacketPtr pkt)
             if (it->second.protocol == "tcp" && !pkt->isTCP())
                 continue;
             if (it->second.protocol == "udp" && !pkt->isUDP())
-                continue;
-            cout << it->first << " " << it->second.protocol << endl;            
-            ParserPtr parser = flow->getParser(it->first, dest);
-            if (parser) {
-                cout << "found " << it->first << "parser! try for flow " << flow << endl;
+                continue;printf("nat.cc #229: try to getParser:%s\n", it->first.c_str());
+            parser = flow->getParser(it->first, dest);
+            if (parser) {printf("found parser for %s\n", it->first.c_str());
                 ops = parser->process(content);
+                cout <<" process over: #"<< ops.size() << endl;
                 if (ops.size() > 0) {
 //                    chosenProtocol = it->first;
                     flow->setProtocol(it->first);
                     break;
                 }
+            } else {
+                printf("not found parser for %s\n", it->first.c_str());
             }
         }
 	} else {
 	    std::cout << "flow " << flow << " 's protocol=" << protocol << std::endl;
-	    ParserPtr parser = flow->getParser(protocol, dest);
+	    parser = flow->getParser(protocol, dest);
         if (parser) {
             ops = parser->process(content);
         }
 	}
 	if (ops.size() > 0) {
         cout << "ops.size " << ops.size() << "operations!\n";
-	    int delta = modify(pkt, ops);
+	    int delta = modify(pkt, ops, parser);
 	    flow->addOffset(dest, delta);
 	}
 }

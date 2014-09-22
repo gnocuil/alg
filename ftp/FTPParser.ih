@@ -8,7 +8,7 @@
 
 inline void FTPParser::error(char const *msg)
 {
-    std::cerr << msg << '\n';
+    std::cerr << "FTP " << msg << '\n';
 }
 
 // $insert lex

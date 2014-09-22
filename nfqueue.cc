@@ -55,14 +55,14 @@ static void iptables_start()
 {
     int ret;
     ret = system("ip6tables -t raw -A PREROUTING -j NFQUEUE --queue-num 0");
-    ret = system("iptables -t raw -A PREROUTING -j NFQUEUE --queue-num 0");
+    ret = system("iptables  -A FORWARD -j NFQUEUE --queue-num 0");
 }
 
 static void iptables_stop()
 {
     int ret;
     ret = system("ip6tables -t raw -D PREROUTING -j NFQUEUE --queue-num 0");
-    ret = system("iptables -t raw -D PREROUTING -j NFQUEUE --queue-num 0");
+    ret = system("iptables  -D FORWARD -j NFQUEUE --queue-num 0");
 }
 
 int nfqueue_init()
@@ -116,7 +116,7 @@ void nfqueue_close()
 {
     iptables_stop();
 	printf("unbinding from queue 0\n");
-	nfq_destroy_queue(qh);
+	nfq_destroy_queue(qh);printf("unbind ok\n");
 
 #ifdef INSANE
 	/* normally, applications SHOULD NOT issue this command, since

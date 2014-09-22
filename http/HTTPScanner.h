@@ -13,7 +13,7 @@
 class HTTPScanner: public HTTPScannerBase
 {
     public:
-        explicit HTTPScanner(Communicator *c, std::istream &in = std::cin,
+        explicit HTTPScanner(std::istream &in = std::cin,
                                 std::ostream &out = std::cout);
 
         HTTPScanner(std::string const &infile, std::string const &outfile);
@@ -36,26 +36,23 @@ class HTTPScanner: public HTTPScannerBase
                             // be exec'ed after the rules's actions.
         HTTPParserBase::STYPE__ *d_val;
         bool inURL, urlFirst;
-        std::istream& ctois(Communicator *c) {
-            std::string str((char*)(&c), sizeof(Communicator*));
-            static std::istringstream sin(str);
-            return sin;
-        }
+        int cnt;
 };
 
 // $insert scannerConstructors
-inline HTTPScanner::HTTPScanner(Communicator *c, std::istream &in, std::ostream &out)
+inline HTTPScanner::HTTPScanner(std::istream &in, std::ostream &out)
 :
-    //HTTPScannerBase(in, out),
-    HTTPScannerBase(ctois(c), out),
-    d_val(NULL) {
+    HTTPScannerBase(in, out),
+    d_val(NULL),
+    cnt(0) {
     
 }
 
 inline HTTPScanner::HTTPScanner(std::string const &infile, std::string const &outfile)
 :
     HTTPScannerBase(infile, outfile),
-    d_val(NULL)
+    d_val(NULL),
+    cnt(0)
 {}
 
 // $insert inlineLexFunction
@@ -72,7 +69,6 @@ inline void HTTPScanner::preCode()
 inline void HTTPScanner::postCode(PostEnum__ type) 
 {
     // optionally replace by your own code
-    static int cnt = 0;
     if (d_val) *d_val = TokenType(matched(), cnt, cnt + matched().size());
     cnt += matched().size();
 }

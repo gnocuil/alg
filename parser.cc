@@ -1,8 +1,5 @@
 #include "parser.h"
 #include "packet.h"
-#include "http/HTTPParser.h"
-#include "ftp/FTPParser.h"
-#include "sip/SIPParser.h"
 #include "parser_make.h"
 
 using namespace std;
@@ -21,11 +18,19 @@ void Parser::run(Communicator *c) {
     Parser *p = mp_[c];
     if (p) {
         p->run__();
+    } else {
+        //puts("not found comm!!!");
     }
 }
 
-std::vector<Operation> Parser::process(const std::string& data) {
-    c_->addData(data);
+Parser* Parser::getParser(Communicator *c) {
+    return mp_[c];
+}
+
+std::vector<Operation> Parser::process(const std::string& data) {printf("process %d bytes\n", (int)data.size());
+    if (c_->addData(data) < 0) {
+        end = true;
+    }
     std::vector<Operation> ret = ops;
     ops.clear();
     return ret;
@@ -65,4 +70,17 @@ int Parser::totalDelta() const {
 
 bool operator<(const Operation& a, const Operation& b) {
     return a.start_pos < b.start_pos;
+}
+
+void Parser::setLengthEnd(int pos, int len)
+{
+    cout << "Parser::setLengthEnd " << pos << " " << len << endl;
+    endPos = pos + len;
+}
+
+void Parser::setLengthMax(int pos, int len)
+{
+    cout << "Parser::setLengthMax " << pos << " " << len << endl;
+    maxPos = pos;
+    maxLen = len;
 }

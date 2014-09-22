@@ -27,7 +27,6 @@ class FTPParser: public FTPParserBase, public Parser
         int parse();
         
         virtual void run__() {
-            puts("FTP run!");
             d_scanner.switchStreams(*(c_->getIStream()));
             parse();
         }

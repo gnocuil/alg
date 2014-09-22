@@ -9,6 +9,7 @@ using namespace std;
 
 static void sigHandler(int sig)
 {
+    exit(0);//TODO: fix the bug
     nfqueue_close();
     exit(0);
 }
@@ -17,13 +18,9 @@ int main(int argc, char **argv)
 {
     struct sigaction s;
     struct sigaction t;
-    
-//    iptables_start();
-
     s.sa_handler = sigHandler;
     sigemptyset(&s.sa_mask);
     s.sa_flags = 0;
-
     sigaction(SIGINT, &s, &t);
 
     sm.init("example.conf");

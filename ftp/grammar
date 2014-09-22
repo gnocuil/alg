@@ -11,11 +11,11 @@
 FTPmessage: request | response
 ;
 
-response: INT RESPONSE_TEXT '\n'  {std::cout<< "FTP response " << $1 << std::endl;}
+response: INT RESPONSE_TEXT '\n'  {/*std::cout<< "FTP response " << $1 << std::endl;*/}
 ;
 
-request: CMD '\n' {std::cout<< "FTP request" << std::endl;}
-    | CMD REQUEST_TEXT '\n' {std::cout<< "FTP request " << $1 << std::endl;}
+request: CMD '\n' {/*std::cout<< "FTP request" << std::endl;*/}
+    | CMD REQUEST_TEXT '\n' {/*std::cout<< "FTP request " << $1 << std::endl;*/}
     | CMD_EPRT INT ip INT '\n' {
         std::cout << "found eprt: ip=" << $3 << " port=" << $4;
         std::cout << "  pos " << $3.pos << " " << $3.pos_end << std::endl;

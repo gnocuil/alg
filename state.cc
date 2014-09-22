@@ -21,20 +21,28 @@ std::ostream& operator<< (std::ostream& os, const FlowPtr &f)
 }
 
 ParserPtr Flow::getParser(std::string protocol, DEST dest)
-{   
+{
     if (dest == CLIENT) {
         switch (sm.protocols[protocol].ptype_s2c) {
         case StateManager::STATELESS:
-            return Parser::make(protocol, new StatelessCommunicator());
+            return Parser::make(protocol, new StatelessCommunicator(), this);
         case StateManager::STATEFUL:
+            if (!parsers_s2c.count(protocol) || !parsers_s2c[protocol] || parsers_s2c[protocol]->end) {
+                parsers_s2c[protocol] = Parser::make(protocol, new StatefulCommunicator(), this);
+            }
+            return parsers_s2c[protocol];
         default://NONE
             ;
         }
     } else {
-        switch (sm.protocols[protocol].ptype_s2c) {
+        switch (sm.protocols[protocol].ptype_c2s) {
         case StateManager::STATELESS:
-            return Parser::make(protocol, new StatelessCommunicator());
+            return Parser::make(protocol, new StatelessCommunicator(), this);
         case StateManager::STATEFUL:
+            if (!parsers_c2s.count(protocol) || !parsers_c2s[protocol] || parsers_c2s[protocol]->end) {
+                parsers_c2s[protocol] = Parser::make(protocol, new StatefulCommunicator(), this);
+            }
+            return parsers_c2s[protocol];
         default://NONE
             ;
         }
@@ -56,6 +64,19 @@ void Flow::addOffset(DEST dest, int delta)
         offset_c2s += delta;
     else
         offset_s2c += delta;
+}
+
+void Flow::save(std::string content)
+{
+    static FILE* fout = NULL;
+    if (!fout) {
+        ostringstream sos;
+        sos << "flow(" << ip6p << "-" << ip6srv << "<->" << ip4p << "-" << ip4srv << ")";
+        fout = fopen(sos.str().c_str(), "w");
+    }
+    for (int i = 0; i < content.size(); ++i)
+        fprintf(fout, "%c", content[i]);
+    fprintf(fout,"\n--------------------------\n");
 }
 
 void StateManager::init(const std::string file)

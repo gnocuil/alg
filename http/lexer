@@ -5,7 +5,6 @@
 %x header body tag_start tag_att tag_attvalue tag_attvalue_href
 %%
 
-[0-9]+                  return HTTPParser::INTEGER;
 [A-Za-z0-9\/\.]+        return HTTPParser::STATUS_IDENT;
 \n                      {begin(StartCondition__::header); return matched()[0]; }
 \r
