@@ -56,6 +56,7 @@ static void iptables_start()
     int ret;
     ret = system("ip6tables -t raw -A PREROUTING -j NFQUEUE --queue-num 0");
     ret = system("iptables  -A FORWARD -j NFQUEUE --queue-num 0");
+    ret = system("sysctl net.ipv4.ip_forward=1");
 }
 
 static void iptables_stop()

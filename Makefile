@@ -1,7 +1,7 @@
 CC        := g++
 CFLAGS    := -lnfnetlink -lnetfilter_queue -lpthread --std=c++11 -O2
 TARGET    := alg
-OBJS      := main.o ip.o state.o packet.o socket.o nat.o communicator.o parser.o nfqueue.o
+OBJS      := main.o ip.o state.o packet.o socket.o nat.o communicator.o parser.o nfqueue.o flow.o
 protocols := http ftp sip
 
 .PHONY: all

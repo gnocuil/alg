@@ -24,7 +24,7 @@ static void make_ip4pkt(u_int8_t* header, u_int16_t payload_len, const IPv4Addr&
     ip->protocol = protocol;
     ip->check = 0;
     
-	ip->daddr = ip4daddr.getInt();
+    ip->daddr = ip4daddr.getInt();
     ip->saddr = ip4saddr.getInt();
 }
 
@@ -55,7 +55,7 @@ int NAT::translate(PacketPtr pkt)
         return 0;
     }
     if (begin(pkt))
-        return 0;puts("nat.cc line#58");
+        return 0;
     try {
         doApp(pkt);
     } catch (const std::exception& ex) {
@@ -66,7 +66,7 @@ int NAT::translate(PacketPtr pkt)
     doSPort(pkt);
     doDPort(pkt);
     doIP(pkt);
-    finish(pkt);puts("nat.cc line#63");
+    finish(pkt);
     if (pkt->hw_protocol == ETHERTYPE_IPV6) {
         socket4.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest4());
     } else {
@@ -77,7 +77,6 @@ int NAT::translate(PacketPtr pkt)
 
 int NAT::begin(PacketPtr pkt)
 {
-    //tcphdr* tcp = pkt->getTCPHeader();//TODO: not tcp
     if (pkt->getIPVersion() == 4) {
         ip6_hdr* ip6 = pkt->getIP6Header();
         ip4p_ = sm.doMapping(IP6Port(IPv6Addr(ip6->ip6_src), pkt->getSourcePort()), IPv6Addr(ip6->ip6_dst))->ip4p;
@@ -133,149 +132,82 @@ void NAT::finish(PacketPtr pkt)
     pkt->updateChecksum();
 }
 
-int NAT::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
-{
-    if (ops.size() == 0)
-        return 0;
-    sort(ops.begin(), ops.end());
-    int len = pkt->getTransportLen();
-	int hl = pkt->getTransportHeaderLen();
-	len -= hl;
-	char *d, *s;
-	if (pkt->isTCP()) {
-	    d = (char*)pkt->getTCPHeader() + hl;
-    	s = (char*)pkt->getIbufTCPHeader() + hl;
-    } else if (pkt->isUDP()) {
-	    d = (char*)pkt->getUDPHeader() + hl;
-    	s = (char*)pkt->getIbufUDPHeader() + hl;
-    } else {
-        return 0;
-    }
-	int len_old = len;
-	for (int i = 0; i < ops.size(); ++i) {
-	    printf("replace : %d %d [", ops[i].start_pos, ops[i].end_pos);
-	    for (int j = ops[i].start_pos; j < ops[i].end_pos; ++j)
-	        putchar(s[j]);
-	    printf("] with <%s>\n", ops[i].newdata.c_str());
-	    int delta = ops[i].newdata.size() - (ops[i].end_pos - ops[i].start_pos);
-	    printf("delta=%d\n", delta);
-	    len += delta;
-	}
-	printf("newlen=%d\n", len);
-	int cnt = 0, pd, ps;
-	bool inside = false;
-	for (pd = ps = ops[0].start_pos; pd < len; ++pd) {
-	    if (!inside && ps == ops[cnt].start_pos) {
-	        if (ops[cnt].newdata.size() == 0) {
-	            ps = ops[cnt++].end_pos;
-	        } else {
-    	        inside = true;
-	            ps = 0;
-	        }
-	    }
-	    if (inside) {
-	        d[pd] = ops[cnt].newdata[ps++];
-	        if (ps == ops[cnt].newdata.size()) {
-	            inside = false;
-	            ps = ops[cnt++].end_pos;
-	        }
-	    } else {
-	        d[pd] = s[ps++];
-	    }
-	}
-	
-	int maxPos = parser->maxPos;//check max length
-	if (maxPos > 0) {
-	    for (int i = 0; i < ops.size(); ++i) {
-	        if (ops[i].end_pos <= parser->maxPos) {
-        	    int delta = ops[i].newdata.size() - (ops[i].end_pos - ops[i].start_pos);
-	            maxPos += delta;
-	        }
-	    }
-	    maxPos += parser->maxLen;
-	}
-	
-	if (maxPos > 0 && maxPos <= len) {//TODO: absolute offset
-	    cout << "translate: len=" << len << " maxPos=" << maxPos << endl;
-	    string oldcontent = string(d + maxPos, len - maxPos);
-	    string newcontent = parser->getContentLengthExceed(oldcontent);
-	    if (newcontent != oldcontent) {
-	        memcpy(d + maxPos, newcontent.c_str(), newcontent.size());
-	        len = len - oldcontent.size() + newcontent.size();
-	    }
-	}
-	
-	pkt->setTransportLen(len + hl);
-	return len - len_old;
-}
-
 void NAT::doApp(PacketPtr pkt)
 {
     DEST dest = pkt->getDEST();
     
-	tcphdr* tcp = pkt->getTCPHeader();
-	udphdr* udp = pkt->getUDPHeader();
-	int len = pkt->getTransportLen();
-	int hl = pkt->getTransportHeaderLen();
-	FlowPtr flow = pkt->getFlow();
-	if (!flow) return;
-	if (tcp) {
-	    int offsetc2s = flow->getOffset(SERVER);
-	    int offsets2c = flow->getOffset(CLIENT);
+    tcphdr* tcp = pkt->getTCPHeader();
+    udphdr* udp = pkt->getUDPHeader();
+    int len = pkt->getTransportLen();
+    int hl = pkt->getTransportHeaderLen();
+    FlowPtr flow = pkt->getFlow();
+    if (!flow) return;
+    if (tcp) {
+        int offsetc2s = flow->getOffset(SERVER);
+        int offsets2c = flow->getOffset(CLIENT);
         if (dest == SERVER) {
             tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsetc2s);
-	        tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsets2c);
-	    } else {
-	        tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsetc2s);
+            tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsets2c);
+        } else {
+            tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsetc2s);
             tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsets2c);
-	    }
-	}
-	if (len <= hl || flow->ignored())
-	    return;
-	string content;
-	if (tcp)
-	    content = string((char*)tcp + hl, (char*)tcp + len);
-	else if (udp)
-	    content = string((char*)udp + hl, (char*)udp + len);
-	if (content.size() <= 0)
-	    return;
-//	flow->save(content);
-	string protocol = flow->getProtocol();
-	vector<Operation> ops;
-//	string chosenProtocol;
+        }
+    }
+    if (len <= hl || flow->ignored())
+        return;
+    string content;
+    if (tcp)
+        content = string((char*)tcp + hl, (char*)tcp + len);
+    else if (udp)
+        content = string((char*)udp + hl, (char*)udp + len);
+    if (content.size() <= 0)
+        return;
+        
+    if (pkt->isTCP()) {
+        flow->count(pkt, dest);
+    }
+        
+    flow->save(content);
+    string protocol = flow->getProtocol();
+    vector<Operation> ops;
+//    string chosenProtocol;
     ParserPtr parser;
-	if (protocol.size() == 0) {
+    if (protocol.size() == 0) {
         std::map<std::string, StateManager::Protocol>::iterator it;
         for (it = sm.protocols.begin(); it != sm.protocols.end(); it++) {
             //check protocol 
             if (it->second.protocol == "tcp" && !pkt->isTCP())
                 continue;
             if (it->second.protocol == "udp" && !pkt->isUDP())
-                continue;printf("nat.cc #229: try to getParser:%s\n", it->first.c_str());
+                continue;
             parser = flow->getParser(it->first, dest);
-            if (parser) {printf("found parser for %s\n", it->first.c_str());
+            if (parser) {
                 ops = parser->process(content);
-                cout <<" process over: #"<< ops.size() << endl;
+//                cout <<" process over: #"<< ops.size() << endl;
                 if (ops.size() > 0) {
 //                    chosenProtocol = it->first;
                     flow->setProtocol(it->first);
+                    protocol = it->first;
                     break;
                 }
             } else {
                 printf("not found parser for %s\n", it->first.c_str());
             }
         }
-	} else {
-	    std::cout << "flow " << flow << " 's protocol=" << protocol << std::endl;
-	    parser = flow->getParser(protocol, dest);
+    } else {
+        parser = flow->getParser(protocol, dest);
         if (parser) {
             ops = parser->process(content);
         }
-	}
-	if (ops.size() > 0) {
+    }
+    if (protocol.size() > 0) {
+        std::cout<<dest<<" "<<sm.protocols[protocol].ptype_s2c<<" " <<sm.protocols[protocol].ptype_c2s<<endl;
+    }
+
+    if (ops.size() > 0) {
         cout << "ops.size " << ops.size() << "operations!\n";
-	    int delta = modify(pkt, ops, parser);
-	    flow->addOffset(dest, delta);
-	}
+        int delta = flow->modify(pkt, ops, parser);
+        flow->addOffset(dest, delta);
+    }
 }
 

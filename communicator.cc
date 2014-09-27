@@ -11,8 +11,7 @@ using namespace std;
 std::istream& Communicator::getAddrIStream() {
     Communicator* c = this;
     std::string str((char*)(&c), sizeof(Communicator*));
-    std::cout<<"getAddrIStream: str.size="<<str.size()<<std::endl;
-    sin.str(str);puts("before return sin");
+    sin.str(str);
     return sin;
 }
 
@@ -44,20 +43,20 @@ int StatefulCommunicator::addData(const std::string& data) {
         init();
     }
     COMMAND c = ADDDATA;
-    printf("fa: write data ADDDATA\n");
+//    printf("fa: write data ADDDATA\n");
     int cnt = write(fd_data[1], &c, sizeof(c));
-    printf("fa: write cnt=%d\n", cnt);
+//    printf("fa: write cnt=%d\n", cnt);
     do {
-        printf("fa: reading ans(addData)\n");
+//        printf("fa: reading ans(addData)\n");
         int cnt = read(fd_ans[0], &c, sizeof(c));
-        printf("fa: read ans(addData) %d cnt=%d\n", c, cnt);
+//        printf("fa: read ans(addData) %d cnt=%d\n", c, cnt);
         if (!cnt) return -1;
         switch (c) {
         case MOREDATA://parser has done
-            puts("addData::MOREDATA");
+//            puts("addData::MOREDATA");
             break;
         case QUIT:
-            puts("child thread has quit, cancel");
+            puts("addData(): child thread has quit, cancel");
             return -1;
         default:
             break;
@@ -69,21 +68,21 @@ std::istream* StatefulCommunicator::getIStream() {
     //check if the packet should end
     Parser *parser = Parser::getParser(this);
     if (parser && parser->endPos > 0) {
-        printf("getIStream check: endPos=%d total=%d\n", parser->endPos, total_len);
+//        printf("getIStream check: endPos=%d total=%d\n", parser->endPos, total_len);
         if (parser->endPos <= total_len) {//end now
             COMMAND c = QUIT;
-            printf("getIStream: endPos has reached, quit!\n");
+//            printf("getIStream: endPos has reached, quit!\n");
             int result = write(fd_ans[1], &c, sizeof(c));
             throw runtime_error("endPos reached, QUIT!");
         }
     }
 
     COMMAND c = MOREDATA;
-        printf("son: write ans MOREDATA\n");
+//        printf("son: write ans MOREDATA\n");
     int result = write(fd_ans[1], &c, sizeof(c));
-        printf("son: reading data\n");
+//        printf("son: reading data\n");
     result = read(fd_data[0], &c, sizeof(c));
-        printf("son: read data %d\n", c);
+//        printf("son: read data %d\n", c);
     switch (c) {
     case ADDDATA:
         break;
@@ -102,12 +101,12 @@ void StatefulCommunicator::init() {
     pthread_create(&tid, NULL, _thread_t, this);
     COMMAND c;
     do {
-        printf("father: reading ans\n");    
+//        printf("father: reading ans\n");    
         int result = read(fd_ans[0], &c, sizeof(c));
-        printf("father: read ans %d\n", c);
+//        printf("father: read ans %d\n", c);
         switch (c) {
         case MOREDATA://parser has done
-            puts("init::MOREDATA!");
+//            puts("init::MOREDATA!");
             break;
         default:
             ;
@@ -115,7 +114,7 @@ void StatefulCommunicator::init() {
     } while (0);
 }
 
-void StatefulCommunicator::run() {puts("sc run()!");
+void StatefulCommunicator::run() {
     try {
         Parser::run(this);
     } catch (const std::exception &e) {

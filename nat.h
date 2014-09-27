@@ -19,7 +19,5 @@ private:
 //    StateManager &sm_;
     IP4Port ip4p_;
     IP6Port ip6p_;
-    
-    int modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser);
 };
 extern NAT nat;

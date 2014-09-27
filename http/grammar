@@ -13,6 +13,7 @@ httpmessage: statusline httpheaders emptyline httpbody
 statusline: STATUS_IDENT STATUS_IDENT STATUS_IDENT '\n' {
     std::cout << "HTTP First Line: version=" << $1 << "  code=" << $2 << " Reason=" << $3 << std::endl;
     chunked = false;
+    len = 0;
 }
 ;
 httpheaders: httpheaders httpheader
@@ -38,7 +39,7 @@ httpheader: HEADER_IDENT ':' HEADER_VALUE '\n' {
 emptyline: '\n'     {
         ignore=0;
         if (chunked) {
-        } else {
+        } else if (len > 0) {
             puts("not chunked!");
             char buf[20] = {0};
             sprintf(buf, "%x\r\n", len);

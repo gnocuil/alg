@@ -27,7 +27,7 @@ Parser* Parser::getParser(Communicator *c) {
     return mp_[c];
 }
 
-std::vector<Operation> Parser::process(const std::string& data) {printf("process %d bytes\n", (int)data.size());
+std::vector<Operation> Parser::process(const std::string& data) {
     if (c_->addData(data) < 0) {
         end = true;
     }

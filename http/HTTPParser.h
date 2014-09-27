@@ -28,16 +28,18 @@ class HTTPParser: public HTTPParserBase, public Parser
             parse();
         }
         virtual std::string getContentLengthExceed(std::string content) {
-            std::cout << "http::getCLE:" << content << std::endl;
+            //std::cout << "http::getCLE:" << content << std::endl;
             std::ostringstream os;
             if (content.size() > 0) {
                 os << "\r\n" << std::hex << content.size() << "\r\n" << content << "\r\n0\r\n\r\n";
             } else {
                 os << "\r\n0\r\n\r\n";
             }
-            std::cout<<"http::getCLE result:"<<os.str()<<std::endl;
+            //std::cout<<"http::getCLE result:"<<os.str()<<std::endl;
             return os.str();
         }
+        
+        virtual int getCount() { d_scanner.getCount(); }
 
     private:
         void error(char const *msg);    // called on (syntax) errors
@@ -75,7 +77,9 @@ class HTTPParser: public HTTPParserBase, public Parser
                 op.start_pos = pos;
                 op.end_pos = pos_end;
                 op.op = Operation::REPLACE;
-                op.newdata = "[1234::" + ip + "]";
+                    for (int i = 0; i < ip.size(); ++i) if (ip[i] == '.') ip[i] = ',';
+                    op.newdata = ip;
+//                op.newdata = "[1234::" + ip + "]";
                 addOperation(op);
             }
         }

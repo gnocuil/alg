@@ -22,6 +22,8 @@ class HTTPScanner: public HTTPScannerBase
         int lex();
         
         void setSval(HTTPParserBase::STYPE__ *d_val_) { d_val = d_val_; }
+        
+        int getCount() { return cnt; }
 
     private:
         int lex__();

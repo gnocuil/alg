@@ -6,7 +6,7 @@
 #include <boost/shared_ptr.hpp>
 #include "communicator.h"
 
-enum DEST { CLIENT, SERVER };
+enum DEST { CLIENT = 0, SERVER = 1};
 
 class TokenType;
 
@@ -61,6 +61,8 @@ public:
     int maxPos, maxLen;
     
     virtual std::string getContentLengthExceed(std::string content) {return content;}
+    
+    virtual int getCount() { return 0; }
     
 protected:
     void setLengthEnd(int pos, int len);
