@@ -1,6 +1,7 @@
 #include <cstring>
 #include <sstream>
 #include <arpa/inet.h>
+#include <cstdio>
 #include "ip.h"
 
 using namespace std;
