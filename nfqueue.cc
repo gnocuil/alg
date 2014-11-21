@@ -45,8 +45,9 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 	PacketPtr pkt = print_pkt(nfa);
 	pkt->unpack();
 	
-	if (nat.translate(pkt))
+	if (nat.translate(pkt)) {
 	    return nfq_set_verdict(qh, pkt->id, NF_DROP, 0, NULL);
+	}
 	    
 	return nfq_set_verdict(qh, pkt->id, NF_ACCEPT, 0, NULL);
 }

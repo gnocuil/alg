@@ -167,12 +167,14 @@ void NAT::doApp(PacketPtr pkt)
         flow->count(pkt, dest);
     }
         
-    flow->save(content);
+//    flow->save(content);
     string protocol = flow->getProtocol();
     vector<Operation> ops;
 //    string chosenProtocol;
     ParserPtr parser;
-    if (protocol.size() == 0) {
+    string protocol_guess;
+    int protocol_guess_count = 0;
+    if (protocol.size() == 0) {//puts("unknown protocol");
         std::map<std::string, StateManager::Protocol>::iterator it;
         for (it = sm.protocols.begin(); it != sm.protocols.end(); it++) {
             //check protocol 
@@ -189,19 +191,26 @@ void NAT::doApp(PacketPtr pkt)
                     flow->setProtocol(it->first);
                     protocol = it->first;
                     break;
+                } else if (parser->isCorrectProtocol()) {
+                    protocol_guess = it->first;
+                    protocol_guess_count ++;
                 }
             } else {
                 printf("not found parser for %s\n", it->first.c_str());
             }
         }
-    } else {
+    } else {//puts("known protocol");
         parser = flow->getParser(protocol, dest);
         if (parser) {
             ops = parser->process(content);
         }
     }
+    if (protocol.size() == 0 && protocol_guess_count == 1) {
+    //puts("set pro");
+        flow->setProtocol(protocol_guess);
+    }
     if (protocol.size() > 0) {
-        std::cout<<dest<<" "<<sm.protocols[protocol].ptype_s2c<<" " <<sm.protocols[protocol].ptype_c2s<<endl;
+        //std::cout<<dest<<" "<<sm.protocols[protocol].ptype_s2c<<" " <<sm.protocols[protocol].ptype_c2s<<endl;
     }
 
     if (ops.size() > 0) {

@@ -37,7 +37,8 @@ public:
         : c_(c),
           endPos(-1),
           maxPos(-1),
-          end(false) {
+          end(false),
+          correct(false) {
         add(this, c_);
     }
     ~Parser();
@@ -64,10 +65,14 @@ public:
     
     virtual int getCount() { return 0; }
     
+    bool isCorrectProtocol() { return correct; } 
+    
 protected:
     void setLengthEnd(int pos, int len);
     
     void setLengthMax(int pos, int len);
+    
+    void setCorrectProtocol() { correct = true; } 
     
     Communicator *c_;
     static void add(Parser* p, Communicator *c);
@@ -75,6 +80,7 @@ protected:
     
     std::vector<Operation> ops;
     Flow* flow;
+    bool correct;
 };
 
 

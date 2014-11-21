@@ -207,8 +207,8 @@ void Flow::count(PacketPtr pkt, DEST dest)
         s.seq = ntohl(tcp->seq);
         s.len = pkt->getTransportLen() - pkt->getTransportHeaderLen();
         segments[dest].push_back(s);
-        cout << "!!!!!!!!new segment: " << s.seq << " " << s.len << std::endl;
-        cout << "\t" << pkt->getTransportLen() << " " << pkt->getTransportHeaderLen() << endl;
+        //cout << "!!!!!!!!new segment: " << s.seq << " " << s.len << std::endl;
+        //cout << "\t" << pkt->getTransportLen() << " " << pkt->getTransportHeaderLen() << endl;
     } else {
         Segment s;
         s.seq = ntohl(tcp->seq);
@@ -218,7 +218,7 @@ void Flow::count(PacketPtr pkt, DEST dest)
             segments[dest].push_back(s);
         } else {//seq error!
         }
-        cout << "!!!!!!!!new segment: " << s.seq << " " << s.len << " " << seq_exp << std::endl;
+        //cout << "!!!!!!!!new segment: " << s.seq << " " << s.len << " " << seq_exp << std::endl;
     }
 }
 
