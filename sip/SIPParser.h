@@ -26,7 +26,7 @@ class SIPParser: public SIPParserBase, public Parser
         int parse();
         
         virtual void run__() {
-            puts("SIP run!");
+            //puts("SIP run!");
             d_scanner.switchStreams(*(c_->getIStream()));
             parse();
         }

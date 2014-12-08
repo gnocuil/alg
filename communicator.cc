@@ -56,7 +56,7 @@ int StatefulCommunicator::addData(const std::string& data) {
 //            puts("addData::MOREDATA");
             break;
         case QUIT:
-            puts("addData(): child thread has quit, cancel");
+            //puts("addData(): child thread has quit, cancel");
             return -1;
         default:
             break;
@@ -97,7 +97,7 @@ std::istream* StatefulCommunicator::getIStream() {
 
 void StatefulCommunicator::init() {
     running_ = true;
-    cout << "create thread"<<endl;
+    //cout << "create thread"<<endl;
     pthread_create(&tid, NULL, _thread_t, this);
     COMMAND c;
     do {
@@ -118,7 +118,7 @@ void StatefulCommunicator::run() {
     try {
         Parser::run(this);
     } catch (const std::exception &e) {
-        cerr << "In thread " << tid << " : caught exception [" << e.what() << "], quit." << endl;
+        //cerr << "In thread " << tid << " : caught exception [" << e.what() << "], quit." << endl;
     }
     COMMAND c = QUIT;
     int result = write(fd_ans[1], &c, sizeof(c));
@@ -128,7 +128,7 @@ void StatefulCommunicator::run() {
 void* StatefulCommunicator::_thread_t(void* param) {
     StatefulCommunicator* com = (StatefulCommunicator*)param;
     com->run();
-    cerr << "!!! Thread " << com->tid << " QUIT !!!" << endl;
+    //cerr << "!!! Thread " << com->tid << " QUIT !!!" << endl;
     return NULL;
 }
 

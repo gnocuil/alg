@@ -25,6 +25,9 @@ public:
     FlowPtr getMapping(const IP6Port& ip6Port, const IPv6Addr& ip6srv);
     FlowPtr getMapping(const IP4Port& ip4Port, const IPv4Addr& ip4srv);
     
+    //do & get mapping for 4-4 (analysis mode only)
+    FlowPtr doMapping44(const IP4Port& ip4Port1, const IP4Port& ip4Port2);
+    
     void setCurIPv6SrvAddr(const IPv6Addr& addr) {ip6srv_cur_=addr;}
     
     //init configuration from a jason format file
@@ -48,11 +51,14 @@ public:
         PROCESS_TYPE ptype_s2c;
     };
     
+    bool analysisMode;
+    
 private:
     std::queue<IP4Port> pool_;
     std::map<uint32_t, bool> map_pool_;
     std::map<std::pair<IP6Port, IPv6Addr>, FlowPtr> map64_;
     std::map<std::pair<IP4Port, IPv4Addr>, FlowPtr> map46_;
+    std::map<std::pair<IP4Port, IP4Port>, FlowPtr> map44_;//for analysis mode
     IPv6Addr prefix_;
     IPv6Addr ip6srv_cur_;
     

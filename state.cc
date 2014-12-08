@@ -11,6 +11,7 @@ StateManager sm;
 
 void StateManager::init(const std::string file)
 {
+    analysisMode = false;
     using boost::property_tree::ptree;
     ptree pt;
     ifstream fin(file);
@@ -77,7 +78,7 @@ FlowPtr StateManager::doMapping(const IP6Port& ip6Port, const IPv6Addr& ip6srv)
         pair<IP4Port, IPv4Addr> newkey(ip4Port, getServerAddr(ip6srv));
         map64_[key] = flow;
         map46_[newkey] = flow;
-        std::cout << "Create Mapping! " << *flow << std::endl;
+        //std::cout << "Create Mapping! " << *flow << std::endl;
         return flow;
     } else {
         return FlowPtr();
@@ -102,6 +103,26 @@ FlowPtr StateManager::getMapping(const IP4Port& ip4Port, const IPv4Addr& ip4srv)
     } else {
         return FlowPtr();
     }
+}
+
+FlowPtr StateManager::doMapping44(const IP4Port& ip4Port1, const IP4Port& ip4Port2)
+{//ip4Port1: dest; ip4Port2: src
+    pair<IP4Port, IP4Port> key1(ip4Port1, ip4Port2);
+    pair<IP4Port, IP4Port> key2(ip4Port2, ip4Port1);
+    if (map44_.count(key1) != 0) {
+        return map44_[key1];
+    }
+    if (map44_.count(key2) != 0) {
+        return map44_[key2];
+    }
+    if (ntohs(ip4Port2.getPort()) == 80 && ntohs(ip4Port1.getPort()) != 80) {
+        key1 = key2;
+    }
+    //printf("doMapping: destPort=%d srcPort=%d\n", key1.first.getPort(), key1.second.getPort());
+        
+    FlowPtr flow = FlowPtr(new Flow(key1.first, key1.second));
+    map44_[key1] = flow;
+    return flow;
 }
 
 void StateManager::setIPv6Prefix(const IPv6Addr& prefix)

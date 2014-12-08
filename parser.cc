@@ -39,7 +39,7 @@ std::vector<Operation> Parser::process(const std::string& data) {
 void Parser::addOperation(const Operation& op) {
     switch (op.op) {
     case Operation::REPLACE:
-        cout << "addOperation: repalce[" << op.start_pos << "," << op.end_pos << ") with '" << op.newdata << "'\n";
+        //cout << "addOperation: repalce[" << op.start_pos << "," << op.end_pos << ") with '" << op.newdata << "'\n";
         ops.push_back(op);
     default:
         break;
@@ -74,13 +74,13 @@ bool operator<(const Operation& a, const Operation& b) {
 
 void Parser::setLengthEnd(int pos, int len)
 {
-    cout << "Parser::setLengthEnd " << pos << " " << len << endl;
+    //cout << "Parser::setLengthEnd " << pos << " " << len << endl;
     endPos = pos + len;
 }
 
 void Parser::setLengthMax(int pos, int len)
 {
-    cout << "Parser::setLengthMax " << pos << " " << len << endl;
+    //cout << "Parser::setLengthMax " << pos << " " << len << endl;
     maxPos = pos;
     maxLen = len;
 }

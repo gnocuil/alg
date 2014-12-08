@@ -21,10 +21,10 @@ request: CMD '\n' {/*std::cout<< "FTP request" << std::endl;*/}
         }
     }
     | CMD_EPRT INT ip INT '\n' {
-        std::cout << "found eprt: ip=" << $3 << " port=" << $4;
-        std::cout << "  pos " << $3.pos << " " << $3.pos_end << std::endl;
+        //std::cout << "found eprt: ip=" << $3 << " port=" << $4;
+        //std::cout << "  pos " << $3.pos << " " << $3.pos_end << std::endl;
         FlowPtr f = sm.doMapping(IP6Port(IPv6Addr($3.s), $4.s));
-        std::cout << " New mapping: " << f << std::endl;
+        //std::cout << " New mapping: " << f << std::endl;
         addOperation($2.pos, $2.pos_end, Operation::REPLACE, "1");
         addOperation($3.pos, $3.pos_end, Operation::REPLACE, f->ip4p.getIP().getString());
         addOperation($4.pos, $4.pos_end, Operation::REPLACE, f->ip4p.getPortString());

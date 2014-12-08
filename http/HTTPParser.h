@@ -24,7 +24,7 @@ class HTTPParser: public HTTPParserBase, public Parser
         }
         int parse();
         
-        virtual void run__() {puts("http run__!");
+        virtual void run__() {//puts("http run__!");
             parse();
         }
         virtual std::string getContentLengthExceed(std::string content) {
@@ -72,14 +72,14 @@ class HTTPParser: public HTTPParserBase, public Parser
         }
         void reportIP(std::string ip, int pos, int pos_end) {
             if (curTag == "a") {
-                std::cout << "Found ip in a/href: " << ip << " pos:[" << pos << "," << pos_end << ")" << std::endl;
+                //std::cout << "Found ip in a/href: " << ip << " pos:[" << pos << "," << pos_end << ")" << std::endl;
                 Operation op;
                 op.start_pos = pos;
                 op.end_pos = pos_end;
                 op.op = Operation::REPLACE;
-                    for (int i = 0; i < ip.size(); ++i) if (ip[i] == '.') ip[i] = ',';
-                    op.newdata = ip;
-//                op.newdata = "[1234::" + ip + "]";
+//                    for (int i = 0; i < ip.size(); ++i) if (ip[i] == '.') ip[i] = ',';
+//                    op.newdata = ip;
+                op.newdata = "[1234::" + ip + "]";
                 addOperation(op);
             }
         }

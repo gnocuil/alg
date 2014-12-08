@@ -28,6 +28,17 @@ public:
           fout(NULL)
     { init_seq_set[0] = init_seq_set[1] = false; trail[0] = trail[1] = "";
     }
+    
+    //ip4p1: dest(as server); ip4p2: source (as client);
+    Flow(const IP4Port& ip4p1_, const IP4Port& ip4p2_)
+        : offset_c2s(0),
+          offset_s2c(0),
+          ip4p(ip4p1_),
+          ignore_(false),
+          protocol(""),
+          fout(NULL)
+    { init_seq_set[0] = init_seq_set[1] = false; trail[0] = trail[1] = "";
+    }
           
     ~Flow() {std::cout << "Delete " << *this << std::endl;}
     friend std::ostream& operator<< (std::ostream& os, const Flow &f);

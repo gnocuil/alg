@@ -98,7 +98,7 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
     if (ops.size() == 0)
         return 0;
     DEST dest = pkt->getDEST();
-    sort(ops.begin(), ops.end());
+    sort(ops.begin(), ops.end());//sort ?
     int len = pkt->getTransportLen();
 	int hl = pkt->getTransportHeaderLen();
 	len -= hl;
@@ -119,7 +119,7 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 	int offset = 0;
 	if (pkt->isTCP()) {
 	    offset = getPktOffset(pkt);
-	    printf("Packet Offset = %d\n", offset);
+	    //printf("Packet Offset = %d\n", offset);
 	}
 	
 	int tl = 0;//tl===trail[dest].size()
@@ -130,14 +130,14 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 	    trail[dest] = "";
 	}
 	for (int i = 0; i < ops.size(); ++i) {
-	    printf("replace : %d %d [", ops[i].start_pos, ops[i].end_pos);
+	    //printf("replace : %d %d [", ops[i].start_pos, ops[i].end_pos);
 	    for (int j = ops[i].start_pos; j < ops[i].end_pos; ++j)
 	        putchar(s[j - offset]);
-	    printf("] with <%s>\n", ops[i].newdata.c_str());
+	    //printf("] with <%s>\n", ops[i].newdata.c_str());
 	    int delta = ops[i].newdata.size() - (ops[i].end_pos - ops[i].start_pos);
 	    len += delta;
 	}
-	printf("newlen=%d\n", len);
+	//printf("newlen=%d\n", len);
 	int cnt = 0, pd, ps;
 	bool inside = false;
 	for (pd = ps = 0; pd < len; ++pd) {
@@ -164,7 +164,7 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 	len += tl;
 	
 	int maxPos = parser->maxPos;//check max length
-	cout << "modify(): maxPos_1="<<maxPos<<endl;
+	//cout << "modify(): maxPos_1="<<maxPos<<endl;
 	if (maxPos > 0) {
 	    for (int i = 0; i < ops.size(); ++i) {
 	        if (ops[i].end_pos <= parser->maxPos) {
@@ -175,10 +175,10 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 	    }
 	    maxPos += parser->maxLen;
 	}
-	cout << "modify(): maxPos_2="<<maxPos<<endl;
+	//cout << "modify(): maxPos_2="<<maxPos<<endl;
 	maxPos -= offset;
 	if (maxPos > 0 && maxPos <= len) {//TODO: absolute offset
-	    cout << "translate: len=" << len << " maxPos=" << maxPos << " " << "offs="<<offset<< endl;
+	    //cout << "translate: len=" << len << " maxPos=" << maxPos << " " << "offs="<<offset<< endl;
 	    string oldcontent = string(d + maxPos, len - maxPos);
 	    string newcontent = parser->getContentLengthExceed(oldcontent);
 	    if (newcontent != oldcontent) {
@@ -190,7 +190,8 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 	if (pkt->isTCP() && len > len_old && len_old > 1400) {//TODO: exceed MSS)
 	    cout << "Exceed MSS: " << len << " > " << len_old<<endl;
 	    trail[dest] = string(d_ + len_old, d_ + len);
-        len = len_old;
+	    cout << "trail=" << trail[dest] << endl;
+//        len = len_old;
         //TODO: last packet
 	}
 	

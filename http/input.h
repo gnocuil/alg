@@ -64,7 +64,7 @@ private:
             ch = d_in->get();
             if (!(*d_in)) {
                 std::istream *d_in_new = getNewIstream();
-                if (d_in_new) {puts("replace new stream!!");
+                if (d_in_new) {//puts("replace new stream!!");
                     delete d_in;
                     d_in = d_in_new;
                     ch = d_in->get();

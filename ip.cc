@@ -179,6 +179,11 @@ bool operator< (const IP4Port& a, const IP4Port& b)
     return a.port_ < b.port_;
 }
 
+bool operator== (const IP4Port& a, const IP4Port& b)
+{
+    return (a.ip_.getInt() == b.ip_.getInt()) && (a.port_ == b.port_);
+}
+
 bool operator< (const IP6Port& a, const IP6Port& b)
 {
     if (a.ip_ != b.ip_)

@@ -8,7 +8,7 @@
 
 inline void HTTPParser::error(char const *msg)
 {
-    std::cerr << msg << "<gnocuil>\n";
+    //std::cerr << msg << "<gnocuil>\n";
 }
 
 // $insert lex

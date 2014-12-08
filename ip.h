@@ -68,6 +68,7 @@ public:
     std::string getPortString() const;
     
     friend bool operator< (const IP4Port& a, const IP4Port& b);
+    friend bool operator== (const IP4Port& a, const IP4Port& b);
     
     friend std::ostream& operator<< (std::ostream& os, const IP4Port &ip4Port);
 private:

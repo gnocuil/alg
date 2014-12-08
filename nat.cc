@@ -44,18 +44,23 @@ static void make_ip6pkt(u_int8_t* header, u_int16_t payload_len, const IPv6Addr&
 
 int NAT::translate(PacketPtr pkt)
 {
-    if (pkt->hw_protocol == ETHERTYPE_IPV6) {
-        if (!sm.isAddrInRange(pkt->getDest6()))
-            return 0;
-    } else {
-        if (!sm.isAddrInRange(pkt->getDest4()))
-            return 0;
+    if (!sm.analysisMode) {
+        if (pkt->hw_protocol == ETHERTYPE_IPV6) {
+            if (!sm.isAddrInRange(pkt->getDest6()))
+                return 0;
+        } else {
+            if (!sm.isAddrInRange(pkt->getDest4()))
+                return 0;
+        }
     }
     if (!pkt->isTCP() && !pkt->isUDP()) {
         return 0;
     }
-    if (begin(pkt))
-        return 0;
+    if (!sm.analysisMode) {
+        if (begin(pkt))
+            return 0;
+    }
+
     try {
         doApp(pkt);
     } catch (const std::exception& ex) {
@@ -63,14 +68,19 @@ int NAT::translate(PacketPtr pkt)
     } catch (...) {
         cerr << "Exception in doApp: ..." << endl;
     }
+
+    if (sm.analysisMode)
+        return 1;
     doSPort(pkt);
     doDPort(pkt);
     doIP(pkt);
     finish(pkt);
-    if (pkt->hw_protocol == ETHERTYPE_IPV6) {
-        socket4.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest4());
-    } else {
-        socket6.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest6());
+    if (!sm.analysisMode) {
+        if (pkt->hw_protocol == ETHERTYPE_IPV6) {
+            socket4.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest4());
+        } else {
+            socket6.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest6());
+        }
     }
     return 1;
 }
@@ -142,19 +152,33 @@ void NAT::doApp(PacketPtr pkt)
     int hl = pkt->getTransportHeaderLen();
     FlowPtr flow = pkt->getFlow();
     if (!flow) return;
-    if (tcp) {
-        int offsetc2s = flow->getOffset(SERVER);
-        int offsets2c = flow->getOffset(CLIENT);
-        if (dest == SERVER) {
-            tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsetc2s);
-            tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsets2c);
+    if (sm.analysisMode) {
+        iphdr* ip = pkt->getIPHeader();
+        uint16_t dport = 0;
+        if (tcp) dport = tcp->dest;
+        else if (udp) dport = udp->dest;
+        IP4Port ip4p = IP4Port(IPv4Addr(ip->daddr), dport);
+        if (flow->ip4p == ip4p) {
+            dest = SERVER;
         } else {
-            tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsetc2s);
-            tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsets2c);
+            dest = CLIENT;
         }
     }
-    if (len <= hl || flow->ignored())
-        return;
+    if (!sm.analysisMode) {
+        if (tcp) {
+            int offsetc2s = flow->getOffset(SERVER);
+            int offsets2c = flow->getOffset(CLIENT);
+            if (dest == SERVER) {
+                tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsetc2s);
+                tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsets2c);
+            } else {
+                tcp->th_ack = ntohl(ntohl(tcp->th_ack) - offsetc2s);
+                tcp->th_seq = ntohl(ntohl(tcp->th_seq) + offsets2c);
+            }
+        }
+        if (len <= hl || flow->ignored())
+            return;
+    }
     string content;
     if (tcp)
         content = string((char*)tcp + hl, (char*)tcp + len);
@@ -162,11 +186,10 @@ void NAT::doApp(PacketPtr pkt)
         content = string((char*)udp + hl, (char*)udp + len);
     if (content.size() <= 0)
         return;
-        
+//    printf("<CONTENT>");for (int i = 0; i < 50; ++i) putchar(content[i]);printf("</CONTENT>\n");
     if (pkt->isTCP()) {
         flow->count(pkt, dest);
     }
-        
 //    flow->save(content);
     string protocol = flow->getProtocol();
     vector<Operation> ops;
@@ -174,7 +197,7 @@ void NAT::doApp(PacketPtr pkt)
     ParserPtr parser;
     string protocol_guess;
     int protocol_guess_count = 0;
-    if (protocol.size() == 0) {//puts("unknown protocol");
+    if (protocol.size() == 0) {
         std::map<std::string, StateManager::Protocol>::iterator it;
         for (it = sm.protocols.begin(); it != sm.protocols.end(); it++) {
             //check protocol 
@@ -182,7 +205,9 @@ void NAT::doApp(PacketPtr pkt)
                 continue;
             if (it->second.protocol == "udp" && !pkt->isUDP())
                 continue;
+            //cout << it->first<<endl;
             parser = flow->getParser(it->first, dest);
+
             if (parser) {
                 ops = parser->process(content);
 //                cout <<" process over: #"<< ops.size() << endl;
@@ -196,7 +221,7 @@ void NAT::doApp(PacketPtr pkt)
                     protocol_guess_count ++;
                 }
             } else {
-                printf("not found parser for %s\n", it->first.c_str());
+//                printf("not found parser for %s\n", it->first.c_str());
             }
         }
     } else {//puts("known protocol");
@@ -214,7 +239,7 @@ void NAT::doApp(PacketPtr pkt)
     }
 
     if (ops.size() > 0) {
-        cout << "ops.size " << ops.size() << "operations!\n";
+//        cout << "ops.size " << ops.size() << "operations!\n";
         int delta = flow->modify(pkt, ops, parser);
         flow->addOffset(dest, delta);
     }

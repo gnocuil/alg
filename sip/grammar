@@ -10,7 +10,7 @@
 
 sipmessage: requestline headers CRLF sdp {
         if (content_len_.s.size() > 0) {
-            std::cout << "clen=" << content_len_ << " tdelta=" << totalDelta() << std::endl;
+            //std::cout << "clen=" << content_len_ << " tdelta=" << totalDelta() << std::endl;
             addOperation(content_len_, Operation::REPLACE, (content_len_ + totalDelta()).s);
         }
     }
@@ -21,21 +21,21 @@ headers: headers header
     | header
 ;
 header: HEADER_IDENT ':' HEADER_VALUE CRLF {
-        std::cout<<"header: [" << $1 << "]='" << $3 << "'\n";
+        //std::cout<<"header: [" << $1 << "]='" << $3 << "'\n";
         if ($1.s == "Content-Length")
             content_len_ = $3;
     }
     | HEADER_IDENT_VIA ':' TEXT IP6ADDR TEXT trailing CRLF {
-        std::cout<<"VIA:" << $4 << " " << $5.Int() << std::endl;
+        //std::cout<<"VIA:" << $4 << " " << $5.Int() << std::endl;
         FlowPtr f = sm.doMapping(IP6Port(IPv6Addr($4.s), $5.s));
-        std::cout << " New mapping: " << f << std::endl;
+        //std::cout << " New mapping: " << f << std::endl;
         addOperation($4, Operation::REPLACE, f->ip4p.getIP().getString());
         addOperation($5, Operation::REPLACE, f->ip4p.getPortString());
     }
     | HEADER_IDENT_CONTACT ':' TEXT ':' TEXT '@' IP6ADDR ':' TEXT CRLF {
-        std::cout<<"CONTACT:" << $7 << " " << $9.Int() << std::endl;
+        //std::cout<<"CONTACT:" << $7 << " " << $9.Int() << std::endl;
         FlowPtr f = sm.doMapping(IP6Port(IPv6Addr($7.s), $9.s));
-        std::cout << " New mapping contact: " << f << std::endl;
+        //std::cout << " New mapping contact: " << f << std::endl;
         addOperation($7, Operation::REPLACE, f->ip4p.getIP().getString());
         addOperation($9, Operation::REPLACE, f->ip4p.getPortString());
     }
@@ -48,18 +48,18 @@ sdp: sdp sdp_line
     | sdp_line
 ;
 sdp_line: CHAR '=' trailing CRLF {
-        std::cout<< "char[" << $1 << "]=" << $3 << std::endl;
+        //std::cout<< "char[" << $1 << "]=" << $3 << std::endl;
     }
     | CHAR_c '=' TEXT TEXT TEXT CRLF {
-        std::cout<< "char[" << $1 << "]=ip:" << $5 << std::endl;
+        //std::cout<< "char[" << $1 << "]=ip:" << $5 << std::endl;
         c_ip_ = $5;
         addOperation($4, Operation::REPLACE, "IP4", true);
     }
     | CHAR_m '=' TEXT TEXT trailing CRLF {
-        std::cout<< "char[" << $1 << "]=port:" << $4 << std::endl;
+        //std::cout<< "char[" << $1 << "]=port:" << $4 << std::endl;
         if (c_ip_.s.size() > 0) {
             FlowPtr f = sm.doMapping(IP6Port(IPv6Addr(c_ip_.s), $4.s));
-            std::cout << " New mapping contact: " << f << std::endl;
+            //std::cout << " New mapping contact: " << f << std::endl;
             addOperation(c_ip_, Operation::REPLACE, f->ip4p.getIP().getString(), true);
             addOperation($4, Operation::REPLACE, f->ip4p.getPortString(), true);
         }

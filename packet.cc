@@ -141,12 +141,16 @@ FlowPtr Packet::getFlow() {
     if (tcp_) {
         if (ipVersionBefore_ == 6) {
             ret = sm.getMapping(IP6Port(IPv6Addr(ip6_->ip6_src), tcp_->source), IPv6Addr(ip6_->ip6_dst));
+        } else if (sm.analysisMode) {
+            ret = sm.doMapping44(IP4Port(IPv4Addr(ip_->daddr), tcp_->dest), IP4Port(IPv4Addr(ip_->saddr), tcp_->source));
         } else {
             ret = sm.getMapping(IP4Port(IPv4Addr(ip_->daddr), tcp_->dest), IPv4Addr(ip_->saddr));
         }
     } else if (udp_) {
         if (ipVersionBefore_ == 6) {
             ret = sm.getMapping(IP6Port(IPv6Addr(ip6_->ip6_src), udp_->source), IPv6Addr(ip6_->ip6_dst));
+        } else if (sm.analysisMode) {
+            ret = sm.doMapping44(IP4Port(IPv4Addr(ip_->daddr), udp_->dest), IP4Port(IPv4Addr(ip_->saddr), udp_->source));
         } else {
             ret = sm.getMapping(IP4Port(IPv4Addr(ip_->daddr), udp_->dest), IPv4Addr(ip_->saddr));
         }
