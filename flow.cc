@@ -121,18 +121,18 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 	    offset = getPktOffset(pkt);
 	    //printf("Packet Offset = %d\n", offset);
 	}
-	
+	/*
 	int tl = 0;//tl===trail[dest].size()
-	if (trail[dest].size() > 0) {
+	if (trail[dest].size() > 0) {printf("found tl %s\n", trail[dest].c_str());
 	    tl = trail[dest].size();
 	    memcpy(d, trail[dest].c_str(), tl);
 	    d += tl;
 	    trail[dest] = "";
-	}
+	}*/
 	for (int i = 0; i < ops.size(); ++i) {
 	    //printf("replace : %d %d [", ops[i].start_pos, ops[i].end_pos);
-	    for (int j = ops[i].start_pos; j < ops[i].end_pos; ++j)
-	        putchar(s[j - offset]);
+	    //for (int j = ops[i].start_pos; j < ops[i].end_pos; ++j)
+	    //    putchar(s[j - offset]);
 	    //printf("] with <%s>\n", ops[i].newdata.c_str());
 	    int delta = ops[i].newdata.size() - (ops[i].end_pos - ops[i].start_pos);
 	    len += delta;
@@ -160,8 +160,8 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 	    }
 	}
 	
-	d -= tl;
-	len += tl;
+	//d -= tl;
+	//len += tl;
 	
 	int maxPos = parser->maxPos;//check max length
 	//cout << "modify(): maxPos_1="<<maxPos<<endl;
@@ -186,17 +186,35 @@ int Flow::modify(PacketPtr pkt, std::vector<Operation>& ops, ParserPtr parser)
 	        len = len - oldcontent.size() + newcontent.size();
 	    }
 	}
-	
+
 	if (pkt->isTCP() && len > len_old && len_old > 1400) {//TODO: exceed MSS)
-	    cout << "Exceed MSS: " << len << " > " << len_old<<endl;
-	    trail[dest] = string(d_ + len_old, d_ + len);
-	    cout << "trail=" << trail[dest] << endl;
-//        len = len_old;
+	    //cout << "Exceed MSS: " << len << " > " << len_old<<endl;
+	    if (sm.extra == SHIFT) {
+	        trail_shift[pkt->nextSeq()] = string(d_ + len_old, d_ + len);
+	    } else {
+    	    trail[dest] = string(d_ + len_old, d_ + len);
+    	}
+	    //cout << "trail=" << trail[dest] << endl;
+        len = len_old;
         //TODO: last packet
 	}
 	
 	pkt->setTransportLen(len + hl);
 	return len - len_old;
+}
+
+void Flow::shift(PacketPtr pkt, char* d_, int len) {
+    uint32_t seq = pkt->curSeq();
+	if (sm.extra == SHIFT && trail_shift[seq].size() > 0) {//printf("shift len=%d\n", len);
+	    int slen = trail_shift[seq].size();
+	    //printf("In SHIFT: slen=%d %s\n", slen, trail[dest].c_str());
+	    string newt = string(d_ + len - slen, d_ + len);
+	    //printf("newt=%s\n", newt.c_str());
+	    for (int i = len - 1; i >= slen; --i)
+	        d_[i] = d_[i - slen];
+	    memcpy(d_, trail_shift[seq].c_str(), slen);
+	    trail_shift[pkt->nextSeq()] = newt;
+	}
 }
 
 void Flow::count(PacketPtr pkt, DEST dest)

@@ -61,16 +61,22 @@ void analyze(string filename)
             cerr << "Error reading packet header in " << filename << endl;
             break;
         }
-        total += count;
-        //printf("time=[%d,%d]   incl_len=%d    orig_len=%d\n", pkthdr.ts_sec, pkthdr.ts_usec, pkthdr.incl_len, pkthdr.orig_len);
+        //total += count;
+        printf("time=[%d,%d]   incl_len=%d    orig_len=%d\n", pkthdr.ts_sec, pkthdr.ts_usec, pkthdr.incl_len, pkthdr.orig_len);
         count = fread(buf, 1, pkthdr.incl_len, file);
         if (count != pkthdr.incl_len) {
             cerr << "Error reading packet data in " << filename << endl;
             break;
         }
+        printf("read count=%d\n", count);
         total += count;
         //for (int i = 0; i < 40; ++i) printf("%02x ", buf[i]);printf("\n");
         ++cnt;
+        
+        if (buf[12] != 0x08 || buf[13] != 0x00) {//not ipv4
+            puts("not ipv4! ignore");
+            continue;
+        }
 
         PacketPtr pkt = PacketPtr(new Packet);
         pkt->ibuf_ = (buf + 14);
@@ -86,12 +92,12 @@ void analyze(string filename)
         }
         cout<<endl;
 
-        nat.translate(pkt);
+        //nat.translate(pkt);
                                                                                                           
-        if (cnt > 10) break;
+        //if (cnt > 10) break;
         
     } while (true);
-    cout << "total packets=" << cnt << "    total Kbytes=" << total << endl;
+    cout << "total packets=" << cnt << "    total Kbytes=" << total << "   #flows=" << sm.flow_cnt_ << endl;
 }
 
 int main(int argc, char **argv)
@@ -109,14 +115,40 @@ int main(int argc, char **argv)
     sigemptyset(&s.sa_mask);
     s.sa_flags = 0;
     sigaction(SIGINT, &s, &t);
+    //sm.extra = TCP;
+    //sm.extra = SHIFT;
+    sm.extra = NONE;
 
     sm.init("example.conf");
 	init_socket();
 	int rv;
 	char buf[4096] __attribute__ ((aligned));
 	int fd = nfqueue_init();
-
+	
 	for (;;) {
+	/*
+    fd_set rfds;
+    struct timeval tv;
+    int retval;
+
+    FD_ZERO(&rfds);
+    FD_SET(fd, &rfds);
+
+    tv.tv_sec = 0;
+    tv.tv_usec = 10000;
+    
+    retval = select(1, &rfds, NULL, NULL, &tv);
+    
+           if (retval == -1)
+               perror("select()");
+           else if (retval) {
+               printf("Data is available now.\n");
+           }else {
+               //printf("No data within five seconds.\n");
+               socket6.timeout();
+               continue;
+           }
+*/	
 		if ((rv = recv(fd, buf, sizeof(buf), 0)) >= 0) {
 			nfqueue_handle(buf, rv);
 			continue;

@@ -21,9 +21,13 @@ protected:
 
 class SocketRaw6 : public Socket {
 public:
-    int send(u_int8_t* buf, int len, const IPv6Addr& daddr);
+    int send(u_int8_t* buf, int len, const IPv6Addr& daddr, bool keep = false);
+    int timeout();
 protected:
     virtual int initSocket();
+    u_int8_t buf_[2000];
+    int len_;
+    IPv6Addr daddr_;
 };
 
 extern SocketRaw4 socket4;

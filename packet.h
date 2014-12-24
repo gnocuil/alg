@@ -50,6 +50,9 @@ public:
     
     void print();
     
+    uint32_t nextSeq() { return nxt_seq_; }//get next tcp seq (before modification)
+    uint32_t curSeq() { return cur_seq_; }//get current tcp seq (before modification)
+    
     u_int16_t hw_protocol;
     u_int32_t id;
     
@@ -73,6 +76,9 @@ private:
     
     udphdr* udp_;
     udphdr* udp_old_;
+    
+    uint32_t nxt_seq_;
+    uint32_t cur_seq_;
     
     void handleTransportLayer(int offset, int offset_old, int protocol);
     

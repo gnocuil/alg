@@ -14,10 +14,15 @@ public:
     void doIP(PacketPtr pkt);
     void finish(PacketPtr pkt);
     void doApp(PacketPtr pkt);
+    
+    bool doExtraTCP(PacketPtr pkt);
 
 private:
 //    StateManager &sm_;
     IP4Port ip4p_;
     IP6Port ip6p_;
+    
+    FlowPtr exttcpflow_;
+    bool modified_;
 };
 extern NAT nat;

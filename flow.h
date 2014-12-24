@@ -59,11 +59,16 @@ public:
     
     void count(boost::shared_ptr<Packet> pkt, DEST dest);
     
+    void shift(boost::shared_ptr<Packet> pkt, char* d_, int len);
+    
 //private:
     IP6Port ip6p;
     IPv6Addr ip6srv;
     IP4Port ip4p;
     IPv4Addr ip4srv;
+    
+    std::string trail[2];
+    std::map<uint32_t, std::string> trail_shift;
 private:
 
     int getPktOffset(boost::shared_ptr<Packet> pkt);
@@ -88,7 +93,7 @@ private:
     bool init_seq_set[2];
     int  init_seq[2];
     
-    std::string trail[2];
+    
 };
 
 typedef boost::shared_ptr<Flow> FlowPtr;

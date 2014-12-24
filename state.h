@@ -3,11 +3,19 @@
 #include <map>
 #include <queue>
 #include <boost/shared_ptr.hpp>
+#include <sys/time.h>
 #include "ip.h"
 #include "flow.h"
 
-const uint16_t MIN_PORT = 21000;
+const uint16_t MIN_PORT = 32000;
 const uint16_t MAX_PORT = 60000;
+
+    enum EXTRAType {
+        NONE,
+        IP,
+        TCP,
+        SHIFT
+    };
 
 class StateManager {
 public:
@@ -53,6 +61,25 @@ public:
     
     bool analysisMode;
     
+
+    
+    EXTRAType extra;
+    
+    void count1(std::string label) {
+        struct timeval t1;
+        gettimeofday(&t1, NULL);
+        mptime_[label] = t1;
+    }
+    long long count2(std::string label) {
+        struct timeval t2;
+        gettimeofday(&t2, NULL);
+        struct timeval t1 = mptime_[label];
+        time[label] = (t2.tv_sec - t1.tv_sec) * 1000000 + (t2.tv_usec - t1.tv_usec) ;
+        return time[label];
+    }
+    
+    int flow_cnt_;
+    
 private:
     std::queue<IP4Port> pool_;
     std::map<uint32_t, bool> map_pool_;
@@ -62,8 +89,12 @@ private:
     IPv6Addr prefix_;
     IPv6Addr ip6srv_cur_;
     
+   
 public:
     std::map<std::string, Protocol> protocols;
+    
+    std::map<std::string, struct timeval> mptime_;
+    std::map<std::string, long long> time;
 };
 extern StateManager sm;
 

@@ -102,6 +102,8 @@ void Packet::handleTransportLayer(int offset, int offset_old, int protocol)
     case IPPROTO_TCP:
         tcp_ = (tcphdr*)(obuf_ + offset);
         tcp_old_ = (tcphdr*)(ibuf_ + offset_old);
+        cur_seq_ = ntohl(tcp_->th_seq);
+        nxt_seq_ = cur_seq_ + transport_len_ - getTransportHeaderLen();
         break;
     case IPPROTO_UDP:
         udp_ = (udphdr*)(obuf_ + offset);

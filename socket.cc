@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <cerrno>
 #include <iostream>
+#include <cstdlib>
 #include "socket.h"
 
 using namespace std;
@@ -33,6 +34,7 @@ int SocketRaw4::initSocket()
 
 int SocketRaw6::initSocket()
 {
+    len_ = 0;
     return socket(PF_INET6, SOCK_RAW, IPPROTO_RAW);
 }
 
@@ -51,8 +53,24 @@ int SocketRaw4::send(u_int8_t* buf, int len, const IPv4Addr& daddr)
 	return 0;
 }
 
-int SocketRaw6::send(u_int8_t* buf, int len, const IPv6Addr& daddr)
+int SocketRaw6::send(u_int8_t* buf, int len, const IPv6Addr& daddr, bool keep)
 { //cout << "send6 len=" << len << " dest=" << daddr << endl;
+    if (len_ > 0) {
+        timeout();
+    }
+    if (0 && len > 100) {
+        memcpy(buf_, buf, len);
+        len_ = len;
+        daddr_ = daddr;
+        return 0;
+    }
+
+    /*
+    int r = rand() % 100;
+    if (!keep && r < 0) {
+        //printf("drop:r=%d\n", r);
+        return 0;
+    }*/
 	struct sockaddr_in6 dest;
 	memset(&dest, 0, sizeof(dest));
 	dest.sin6_family = AF_INET6;
@@ -63,4 +81,19 @@ int SocketRaw6::send(u_int8_t* buf, int len, const IPv6Addr& daddr)
 		return -1;
 	}
 	return 0;
+}
+
+int SocketRaw6::timeout()
+{if (len_<=0) return 0;
+	struct sockaddr_in6 dest;
+	memset(&dest, 0, sizeof(dest));
+	dest.sin6_family = AF_INET6;
+	dest.sin6_addr = daddr_.getIn6Addr();
+
+	if (sendto(fd_, buf_, len_, 0, (struct sockaddr *)&dest, sizeof(dest)) != len_) {
+		fprintf(stderr, "socket6 send: Failed to send ipv6 packet len=%d %s\n", len_, strerror(errno));
+		return -1;
+	}
+	return 0;
+    len_ = 0;
 }

@@ -12,6 +12,7 @@ StateManager sm;
 void StateManager::init(const std::string file)
 {
     analysisMode = false;
+    flow_cnt_ = 0;
     using boost::property_tree::ptree;
     ptree pt;
     ifstream fin(file);
@@ -119,6 +120,7 @@ FlowPtr StateManager::doMapping44(const IP4Port& ip4Port1, const IP4Port& ip4Por
         key1 = key2;
     }
     //printf("doMapping: destPort=%d srcPort=%d\n", key1.first.getPort(), key1.second.getPort());
+    ++flow_cnt_;
         
     FlowPtr flow = FlowPtr(new Flow(key1.first, key1.second));
     map44_[key1] = flow;
