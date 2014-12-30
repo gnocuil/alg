@@ -10,7 +10,7 @@
 #include "ip.h"
 #include "state.h"
 
-const int BUF_LEN = 2000;
+const int BUF_LEN = 65536;
 
 class Packet {
 public:

@@ -118,7 +118,7 @@ int NAT::translate(PacketPtr pkt)
             //printf("flags=%x  transportlen=%d transporthlen=%d keep=%d\n", pkt->getTCPHeader()->th_flags, pkt->getTransportLen(), pkt->getTransportHeaderLen(), keep);
             
             if (sm.extra == TCP) {
-                unsigned char buf[3000];
+                unsigned char buf[65535];
                 int len = pkt->getObufLen();
                 memcpy(buf, pkt->obuf_, len);
                 if (doExtraTCP(pkt)) {
@@ -132,8 +132,7 @@ int NAT::translate(PacketPtr pkt)
     }
 
     
-    cout << "Len=" << pkt->getObufLen() << "   total=" << sm.time["total"] << "    nat64=" << sm.time["nat64"] << "    app=" << sm.time["app"] << "    parse=" << sm.time["parse"] << "    mo=" << sm.time["mo"] << "    be=" << sm.time["begin"] 
-    << endl;
+//    cout << "Len=" << pkt->getObufLen() << "   total=" << sm.time["total"] << "    nat64=" << sm.time["nat64"] << "    app=" << sm.time["app"] << "    parse=" << sm.time["parse"] << "    mo=" << sm.time["mo"] << "    be=" << sm.time["begin"]     << endl;
     
     static long long total = 0;
     static long long app = 0;
@@ -149,8 +148,7 @@ int NAT::translate(PacketPtr pkt)
     mo += sm.time["mo"];
     be += sm.time["begin"];
     
-    cout << "   total:" << "   total=" << total << "    nat64=" << n64 << "    app=" << app << "    parse=" << parse << "    mo=" << mo << "    be="<<be
-    << endl;
+//    cout << "   total:" << "   total=" << total << "    nat64=" << n64 << "    app=" << app << "    parse=" << parse << "    mo=" << mo << "    be="<<be    << endl;
     
     return 1;
 }
@@ -215,7 +213,6 @@ void NAT::finish(PacketPtr pkt)
 void NAT::doApp(PacketPtr pkt)
 {
     DEST dest = pkt->getDEST();
-    
     tcphdr* tcp = pkt->getTCPHeader();
     udphdr* udp = pkt->getUDPHeader();
     int len = pkt->getTransportLen();
@@ -265,6 +262,7 @@ void NAT::doApp(PacketPtr pkt)
         content = string((char*)udp + hl, (char*)udp + len);
     if (content.size() <= 0)
         return;
+    printf("doapp #3 size=%d\n", content.size());
 //    printf("<CONTENT>");for (int i = 0; i < 50; ++i) putchar(content[i]);printf("</CONTENT>\n");
     if (pkt->isTCP()) {
         flow->count(pkt, dest);
@@ -284,12 +282,12 @@ void NAT::doApp(PacketPtr pkt)
                 continue;
             if (it->second.protocol == "udp" && !pkt->isUDP())
                 continue;
-            //cout << it->first<<endl;
+            cout << it->first<<endl;
             parser = flow->getParser(it->first, dest);
 
-            if (parser) {
+            if (parser) {printf("processing!!!\n");
                 ops = parser->process(content);
-//                cout <<" process over: #"<< ops.size() << endl;
+                cout <<" process over: #"<< ops.size() << endl << endl << endl;
                 if (ops.size() > 0) {
 //                    chosenProtocol = it->first;
                     flow->setProtocol(it->first);

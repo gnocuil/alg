@@ -54,6 +54,7 @@ void analyze(string filename)
     uint8_t buf[65536];
     int cnt = 0;
     long long total = count;
+    int mxlen = 0;
     do {
         count = fread(&pkthdr, 1, sizeof(pkthdr), file);
         if (count == 0) break;//EOF
@@ -63,38 +64,41 @@ void analyze(string filename)
         }
         //total += count;
         printf("time=[%d,%d]   incl_len=%d    orig_len=%d\n", pkthdr.ts_sec, pkthdr.ts_usec, pkthdr.incl_len, pkthdr.orig_len);
+        if (pkthdr.incl_len > mxlen) {
+            mxlen = pkthdr.incl_len;
+            printf("mxlen=%d\n", mxlen);
+        }
         count = fread(buf, 1, pkthdr.incl_len, file);
         if (count != pkthdr.incl_len) {
             cerr << "Error reading packet data in " << filename << endl;
             break;
         }
-        printf("read count=%d\n", count);
+        //printf("read count=%d\n", count);
         total += count;
-        //for (int i = 0; i < 40; ++i) printf("%02x ", buf[i]);printf("\n");
+        //for (int i = 14; i < 50; ++i) printf("%02x ", buf[i]);printf("\n");
         ++cnt;
         
         if (buf[12] != 0x08 || buf[13] != 0x00) {//not ipv4
             puts("not ipv4! ignore");
             continue;
         }
-
         PacketPtr pkt = PacketPtr(new Packet);
         pkt->ibuf_ = (buf + 14);
         pkt->setIbufLen(pkthdr.incl_len - 14);
         pkt->hw_protocol = ETHERTYPE_IP;
-        pkt->unpack();        if (!pkt->isTCP()) continue; if (ntohs(pkt->getTCPHeader()->source) != 80 && ntohs(pkt->getTCPHeader()->dest) != 80) continue;
-        cout << pkt->getDest4() << "   ";
-        cout << "protocol=" << (int)(pkt->getIPHeader()->protocol) <<"   iplen=" << pkthdr.incl_len - 14 << "    ";
+        pkt->unpack();        //if (!pkt->isTCP()) continue; if (ntohs(pkt->getTCPHeader()->source) != 80 && ntohs(pkt->getTCPHeader()->dest) != 80) continue;
+//        cout << pkt->getDest4() << "   ";
+//        cout << "protocol=" << (int)(pkt->getIPHeader()->protocol) <<"   iplen=" << pkthdr.incl_len - 14 << "    ";
         if (pkt->isTCP()) {
-            cout << "isTCP!  ";
+//            cout << "isTCP!  ";
             tcphdr* tcp = pkt->getTCPHeader();
-            cout << (int)ntohs(tcp->source) << "  " << ntohs((int)tcp->dest) << " ";
+//            cout << (int)ntohs(tcp->source) << "  " << ntohs((int)tcp->dest) << " ";
         }
-        cout<<endl;
+//        cout<<endl;
 
-        //nat.translate(pkt);
+        nat.translate(pkt);
                                                                                                           
-        //if (cnt > 10) break;
+        if (cnt > 20) break;
         
     } while (true);
     cout << "total packets=" << cnt << "    total Kbytes=" << total << "   #flows=" << sm.flow_cnt_ << endl;
@@ -102,6 +106,10 @@ void analyze(string filename)
 
 int main(int argc, char **argv)
 {
+    //sm.extra = TCP;
+    //sm.extra = SHIFT;
+    sm.extra = NONE;
+    
     if (argc > 1) {
         for (int i = 1; i < argc; ++i) {
             //puts(argv[i]);
@@ -115,9 +123,7 @@ int main(int argc, char **argv)
     sigemptyset(&s.sa_mask);
     s.sa_flags = 0;
     sigaction(SIGINT, &s, &t);
-    //sm.extra = TCP;
-    //sm.extra = SHIFT;
-    sm.extra = NONE;
+
 
     sm.init("example.conf");
 	init_socket();
