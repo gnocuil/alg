@@ -79,6 +79,8 @@ public:
     }
     
     int flow_cnt_;
+
+    int tun;
     
 private:
     std::queue<IP4Port> pool_;

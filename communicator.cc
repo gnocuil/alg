@@ -15,7 +15,7 @@ std::istream& Communicator::getAddrIStream() {
     return sin;
 }
 
-int StatelessCommunicator::addData(const std::string& data) {
+int StatelessCommunicator::addData(const std::string& data) {//cout<<"stateless addData size="<<data.size()<<endl;
     data_ = data;
     Parser::run(this);
     return 0;
@@ -37,7 +37,7 @@ StatefulCommunicator::StatefulCommunicator()
     r = pipe (fd_ans);//TODO: check pipe() failure
 }
 
-int StatefulCommunicator::addData(const std::string& data) {
+int StatefulCommunicator::addData(const std::string& data) {cout<<"addData size="<<data.size()<<endl;
     data_ = data;
     if (!running_) {
         init();
@@ -64,7 +64,7 @@ int StatefulCommunicator::addData(const std::string& data) {
     } while (0);
     return 0;
 }
-std::istream* StatefulCommunicator::getIStream() {
+std::istream* StatefulCommunicator::getIStream() {puts("try to getIStream()");
     //check if the packet should end
     Parser *parser = Parser::getParser(this);
     if (parser && parser->endPos > 0) {

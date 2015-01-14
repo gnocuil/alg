@@ -8,7 +8,7 @@
 
 using namespace std;
 
-NAT nat;
+//NAT nat;
 
 static void make_ip4pkt(u_int8_t* header, u_int16_t payload_len, const IPv4Addr& ip4saddr, const IPv4Addr& ip4daddr, uint8_t protocol)
 {
@@ -84,16 +84,17 @@ int NAT::translate(PacketPtr pkt)
     }
     if (!pkt->isTCP() && !pkt->isUDP()) {
         return 0;
-    }
+    }//printf("  translate: %d %d  len=%d tid=%d\n", ntohs(pkt->getSourcePort()), ntohs(pkt->getDestPort()), pkt->getTransportLen(), tid);
     if (!sm.analysisMode) {
         if (begin(pkt))
             return 0;
     }
+
     modified_ = false;
     sm.count2("begin");
     sm.count1("app");
     try {
-        doApp(pkt);
+        //doApp(pkt);
     } catch (const std::exception& ex) {
         cerr << "Exception in doApp: " << ex.what() << endl;
     } catch (...) {
@@ -110,9 +111,9 @@ int NAT::translate(PacketPtr pkt)
     sm.count2("nat64");
     sm.count2("total");
     if (!sm.analysisMode) {
-        if (pkt->hw_protocol == ETHERTYPE_IPV6) {
+        if (pkt->hw_protocol == ETHERTYPE_IPV6) {//printf("send4 tid=%d len=%d\n", tid, pkt->getObufLen());
             socket4.send(pkt->obuf_, pkt->getObufLen(), pkt->getDest4());
-        } else {
+        } else {//printf("send6 tid=%d len=%d ", tid, pkt->getObufLen());cout << ip6p_ << endl;
             bool keep = modified_;
             if (pkt->getTransportLen() - pkt->getTransportHeaderLen() == 0) keep = true;
             //printf("flags=%x  transportlen=%d transporthlen=%d keep=%d\n", pkt->getTCPHeader()->th_flags, pkt->getTransportLen(), pkt->getTransportHeaderLen(), keep);
@@ -157,12 +158,18 @@ int NAT::begin(PacketPtr pkt)
 {
     if (pkt->getIPVersion() == 4) {
         ip6_hdr* ip6 = pkt->getIP6Header();
-        ip4p_ = sm.doMapping(IP6Port(IPv6Addr(ip6->ip6_src), pkt->getSourcePort()), IPv6Addr(ip6->ip6_dst))->ip4p;
+        FlowPtr f = sm.doMapping(IP6Port(IPv6Addr(ip6->ip6_src), pkt->getSourcePort()), IPv6Addr(ip6->ip6_dst));
+        if (f->tid < 0) {
+            f->tid = tid;
+            //cout << "set " <<f << "  tid=" << tid << endl;
+        }
+        ip4p_ = f->ip4p;
         sm.setCurIPv6SrvAddr(IPv6Addr(ip6->ip6_dst));
     } else {
         iphdr* ip = pkt->getIPHeader();
         FlowPtr f = sm.getMapping(IP4Port(IPv4Addr(ip->daddr), pkt->getDestPort()), IPv4Addr(ip->saddr));
         if (!f) return 1;
+        //cout << "getflow: dport=" << ntohs(pkt->getDestPort()) << "   " << f << endl;
         ip6p_ = f->ip6p;
     }
     return 0;
@@ -262,7 +269,6 @@ void NAT::doApp(PacketPtr pkt)
         content = string((char*)udp + hl, (char*)udp + len);
     if (content.size() <= 0)
         return;
-    printf("doapp #3 size=%d\n", content.size());
 //    printf("<CONTENT>");for (int i = 0; i < 50; ++i) putchar(content[i]);printf("</CONTENT>\n");
     if (pkt->isTCP()) {
         flow->count(pkt, dest);
@@ -282,12 +288,12 @@ void NAT::doApp(PacketPtr pkt)
                 continue;
             if (it->second.protocol == "udp" && !pkt->isUDP())
                 continue;
-            cout << it->first<<endl;
+            //cout << it->first<<endl;
             parser = flow->getParser(it->first, dest);
 
-            if (parser) {printf("processing!!!\n");
+            if (parser) {//printf("try process...\n");
                 ops = parser->process(content);
-                cout <<" process over: #"<< ops.size() << endl << endl << endl;
+//                if (ops.size > 0) cout <<" process over: #"<< ops.size() << endl << endl << endl;
                 if (ops.size() > 0) {
 //                    chosenProtocol = it->first;
                     flow->setProtocol(it->first);

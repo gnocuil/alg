@@ -29,6 +29,7 @@ public:
             // FALLING THROUGH
 
             default:
+               // if (ch < 0 || ch > 127) return AT_EOF;
             return ch;
         }
     }
@@ -65,7 +66,7 @@ private:
             if (!(*d_in)) {
                 std::istream *d_in_new = getNewIstream();
                 if (d_in_new) {//puts("replace new stream!!");
-                    delete d_in;
+                    //delete d_in;
                     d_in = d_in_new;
                     ch = d_in->get();
                 }

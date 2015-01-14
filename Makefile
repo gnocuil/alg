@@ -10,7 +10,7 @@ all: $(TARGET)
 $(TARGET) : proto parser_maker $(OBJS)
 	$(CC) -o $(TARGET) $(OBJS) $(foreach p,$(protocols),$(p)/lex.o) $(foreach p,$(protocols),$(p)/parse.o)  $(CFLAGS)
 
-%.o: %.cc
+%.o: %.cc 
 	$(CC) -c -o $@ $<  $(CFLAGS)
 	
 .PHONY: parser_maker

@@ -25,8 +25,8 @@ httpheader: HEADER_IDENT ':' HEADER_VALUE '\n' {
         //addOperation($1.pos, $3.pos_end, Operation::REPLACE, "Transfer-Encoding: chunked");    
         //len = $3.Int();
     }
-    if ($1.s == "Accept-Encoding") {
-        //addOperation($3, Operation::REPLACE, "");
+    if ($1.s == "Content-Encoding") {
+        //addOperation($3, Operation::REPLACE, "");g
     }
     if ($1.s == "Transfer-Encoding") {
         if ($3.s.find(chunked) != std::string::npos) {

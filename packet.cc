@@ -104,10 +104,12 @@ void Packet::handleTransportLayer(int offset, int offset_old, int protocol)
         tcp_old_ = (tcphdr*)(ibuf_ + offset_old);
         cur_seq_ = ntohl(tcp_->th_seq);
         nxt_seq_ = cur_seq_ + transport_len_ - getTransportHeaderLen();
+        port_t = ntohs(tcp_->source) + ntohs(tcp_->dest);
         break;
     case IPPROTO_UDP:
         udp_ = (udphdr*)(obuf_ + offset);
         udp_old_ = (udphdr*)(ibuf_ + offset_old);
+        port_t = ntohs(udp_->source) + ntohs(udp_->dest);
         break;
     default:
         //TODO

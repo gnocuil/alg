@@ -39,6 +39,7 @@ class HTTPScanner: public HTTPScannerBase
         HTTPParserBase::STYPE__ *d_val;
         bool inURL, urlFirst;
         int cnt;
+        bool ignore;
 };
 
 // $insert scannerConstructors
@@ -46,7 +47,8 @@ inline HTTPScanner::HTTPScanner(std::istream &in, std::ostream &out)
 :
     HTTPScannerBase(in, out),
     d_val(NULL),
-    cnt(0) {
+    cnt(0),
+    ignore(false) {
     
 }
 
@@ -54,7 +56,8 @@ inline HTTPScanner::HTTPScanner(std::string const &infile, std::string const &ou
 :
     HTTPScannerBase(infile, outfile),
     d_val(NULL),
-    cnt(0)
+    cnt(0),
+    ignore(false)
 {}
 
 // $insert inlineLexFunction
@@ -73,6 +76,8 @@ inline void HTTPScanner::postCode(PostEnum__ type)
     // optionally replace by your own code
     if (d_val) *d_val = TokenType(matched(), cnt, cnt + matched().size());
     cnt += matched().size();
+    //std::cout << "{" << matched() << "}" << std::endl;
+    //if (matched().size() == 0) exit(1);
 }
 
 inline void HTTPScanner::print() 

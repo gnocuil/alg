@@ -78,8 +78,8 @@ class HTTPParser: public HTTPParserBase, public Parser
                 op.end_pos = pos_end;
                 op.op = Operation::REPLACE;
                 std::string ip2;
-////                for (int i = 0; i < ip.size(); ++i) if (ip[i] != '.') ip2 += ip[i]; else ip2 += "|";
-                    for (int i = 0; i < ip.size(); ++i) if (ip[i] != '.') ip2 += ip[i];
+                for (int i = 0; i < ip.size(); ++i) if (ip[i] != '.') ip2 += ip[i]; else ip2 += "|";
+//                    for (int i = 0; i < ip.size(); ++i) if (ip[i] != '.') ip2 += ip[i];
                    op.newdata = ip2;
 //                op.newdata = "[1234::" + ip + "]";
                 addOperation(op);

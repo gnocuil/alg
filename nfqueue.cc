@@ -24,6 +24,8 @@
 static struct nfq_handle *h;
 static struct nfq_q_handle *qh;
 
+NAT nat;
+
 static PacketPtr print_pkt (struct nfq_data *tb)
 {
     PacketPtr pkt = PacketPtr(new Packet);
@@ -35,7 +37,10 @@ static PacketPtr print_pkt (struct nfq_data *tb)
 		pkt->hw_protocol = ntohs(ph->hw_protocol);
 	}
 
-	pkt->setIbufLen(nfq_get_payload(tb, pkt->getIbuf()));
+    unsigned char *ibuf;
+    int len = nfq_get_payload(tb, &ibuf);
+    pkt->setIbuf(ibuf, len);
+//	pkt->setIbufLen();
     return pkt;
 }
 

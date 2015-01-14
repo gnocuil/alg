@@ -9,14 +9,19 @@
 
 using namespace std;
 
-SocketRaw4 socket4;
-SocketRaw6 socket6;
-
+//SocketRaw4 socket4;
+//SocketRaw6 socket6;
+/*
 void init_socket()
 {
     socket4.init();
     socket6.init();
 }
+*/
+
+static pthread_mutex_t smutex = PTHREAD_MUTEX_INITIALIZER;
+static void lock() {pthread_mutex_lock(&smutex);}
+static void unlock() {pthread_mutex_unlock(&smutex);}
 
 void Socket::init()
 {    
@@ -45,18 +50,20 @@ int SocketRaw4::send(u_int8_t* buf, int len, const IPv4Addr& daddr)
 	dest.sin_family = AF_INET;
 	uint32_t daddrbuf = daddr.getInt();
 	memcpy(&dest.sin_addr, &daddrbuf, 4);
-	
+//    lock();	
 	if (sendto(fd_, buf, len, 0, (struct sockaddr *)&dest, sizeof(dest)) != len) {
 		fprintf(stderr, "socket4 send: Failed to send ipv4 packet len=%d %s\n", len, strerror(errno));
+//		unlock();
 		return -1;
 	}
+//	unlock();
 	return 0;
 }
 
 int SocketRaw6::send(u_int8_t* buf, int len, const IPv6Addr& daddr, bool keep)
-{ //cout << "send6 len=" << len << " dest=" << daddr << endl;
+{ 
     if (len_ > 0) {
-        timeout();
+        //timeout();
     }
     if (0 && len > 100) {
         memcpy(buf_, buf, len);
@@ -75,11 +82,14 @@ int SocketRaw6::send(u_int8_t* buf, int len, const IPv6Addr& daddr, bool keep)
 	memset(&dest, 0, sizeof(dest));
 	dest.sin6_family = AF_INET6;
 	dest.sin6_addr = daddr.getIn6Addr();
-
+//cout << "send6 len=" << len << " dest=" << daddr << endl;
+//    lock();
 	if (sendto(fd_, buf, len, 0, (struct sockaddr *)&dest, sizeof(dest)) != len) {
 		fprintf(stderr, "socket6 send: Failed to send ipv6 packet len=%d %s\n", len, strerror(errno));
+//		unlock();
 		return -1;
 	}
+//	unlock();
 	return 0;
 }
 

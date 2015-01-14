@@ -13,7 +13,9 @@ public:
           offset_s2c(0),
           ignore_(false),
           protocol(""),
-          fout(NULL)
+          fout(NULL),
+          tid(-1),
+          analyze(0)
     { init_seq_set[0] = init_seq_set[1] = false; trail[0] = trail[1] = "";
     }
     Flow(const IP6Port& ip6p_, const IP4Port& ip4p_, const IPv6Addr& ip6srv_, const IPv4Addr& ip4srv_)
@@ -25,7 +27,9 @@ public:
           offset_s2c(0),
           ignore_(false),
           protocol(""),
-          fout(NULL)
+          fout(NULL),
+          tid(-1),
+          analyze(0)
     { init_seq_set[0] = init_seq_set[1] = false; trail[0] = trail[1] = "";
     }
     
@@ -36,11 +40,15 @@ public:
           ip4p(ip4p1_),
           ignore_(false),
           protocol(""),
-          fout(NULL)
+          fout(NULL),
+          tid(-1),
+          analyze(0)
     { init_seq_set[0] = init_seq_set[1] = false; trail[0] = trail[1] = "";
     }
           
-    ~Flow() {std::cout << "Delete " << *this << std::endl;}
+    ~Flow() {
+        //std::cout << "Delete " << *this << std::endl;
+    }
     friend std::ostream& operator<< (std::ostream& os, const Flow &f);
     int getOffset(DEST dest);
     void addOffset(DEST dest, int delta);
@@ -69,6 +77,11 @@ public:
     
     std::string trail[2];
     std::map<uint32_t, std::string> trail_shift;
+    
+    int tid;
+    
+    int analyze;
+
 private:
 
     int getPktOffset(boost::shared_ptr<Packet> pkt);

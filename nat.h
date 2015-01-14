@@ -2,10 +2,16 @@
 #include "packet.h"
 #include "state.h"
 #include "ip.h"
+#include "socket.h"
 
 class NAT {
 public:
-//    NAT(StateManager &sm) : sm_(sm) {};
+    NAT(bool init = true) {
+        if (init) {
+            socket4.init();
+            socket6.init();
+        }
+    }
     
     int translate(PacketPtr pkt);
     int begin(PacketPtr pkt);
@@ -16,6 +22,8 @@ public:
     void doApp(PacketPtr pkt);
     
     bool doExtraTCP(PacketPtr pkt);
+    
+    int tid;
 
 private:
 //    StateManager &sm_;
@@ -24,5 +32,7 @@ private:
     
     FlowPtr exttcpflow_;
     bool modified_;
+    SocketRaw4 socket4;
+    SocketRaw6 socket6;
 };
-extern NAT nat;
+//extern NAT nat;

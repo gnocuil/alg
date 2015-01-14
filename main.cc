@@ -7,6 +7,7 @@
 #include "packet.h"
 #include <net/ethernet.h>
 #include "nat.h"
+#include "tun.h"
 
 using namespace std;
 
@@ -34,6 +35,73 @@ typedef struct pcaprec_hdr_s {
     uint32_t orig_len;       /* actual length of packet */
 } pcaprec_hdr_t;
 
+static long long gettime(struct timeval t1, struct timeval t2) {
+    return (t2.tv_sec - t1.tv_sec) * 1000000 + (t2.tv_usec - t1.tv_usec) ;
+}
+
+int parse(char *buf, int len) {
+    for (int i = 0; i + 13 < len; ++i) {
+        if (buf[i] == 'h' && buf[i+1] == 't' && buf[i+2] == 't' && buf[i+3] == 'p' && buf[i+4] == ':' && buf[i+5] == '/' && buf[i+6] == '/') {
+          try{
+            int j = i + 7, t;
+            //#1
+            for (t = 0; t < 3; ++t)
+                if (j + t >= len || (buf[j+t]<'0' || buf[j+t]>'9'))
+                    break;
+            if (t <= 0) continue;
+            j += t;
+            if (j >= len || buf[j] != '.') 
+                continue;
+            ++j;
+            if (j >= len) 
+                continue;
+            //#2
+            for (t = 0; t < 3; ++t)
+                if (j + t >= len || (buf[j+t]<'0' || buf[j+t]>'9'))
+                    break;
+            if (t <= 0) continue;
+            j += t;
+            if (j >= len || buf[j] != '.') 
+                continue;
+            ++j;
+            if (j >= len) 
+                continue;
+            
+            //#3    
+            for (t = 0; t < 3; ++t)
+                if (j + t >= len || (buf[j+t]<'0' || buf[j+t]>'9'))
+                    break;
+            if (t <= 0) continue;
+            j += t;
+            if (j >= len || buf[j] != '.') 
+                continue;
+            ++j;
+            if (j >= len) 
+                continue;
+                
+            for (t = 0; t < 3; ++t)
+                if (j + t >= len || (buf[j+t]<'0' || buf[j+t]>'9'))
+                    break;
+            if (t <= 0) continue;
+            j += t;
+
+            /*
+                printf("found: ");
+                for (int j = i; j < len && j < i + 50; ++j) putchar(buf[j]);
+                printf("\n");
+            */  
+                return 1;
+          } catch (...) {
+                printf("Exception: ");
+                for (int j = i; j < len && j < i + 50; ++j) putchar(buf[j]);
+                printf("\n");            
+          }
+
+        }
+    }
+    return 0;
+}
+
 void analyze(string filename)
 {
     sm.init("example.conf");
@@ -55,6 +123,16 @@ void analyze(string filename)
     int cnt = 0;
     long long total = count;
     int mxlen = 0;
+    struct timeval t1;
+    gettimeofday(&t1, NULL);
+    struct timeval t3;
+    gettimeofday(&t3, NULL);
+    int total_flow = 0;
+    int sip_flow = 0;
+    int ftp_flow = 0;
+    int http_flow = 0;
+    int literal = 0;
+    long long total1 = 0;
     do {
         count = fread(&pkthdr, 1, sizeof(pkthdr), file);
         if (count == 0) break;//EOF
@@ -63,7 +141,7 @@ void analyze(string filename)
             break;
         }
         //total += count;
-        printf("time=[%d,%d]   incl_len=%d    orig_len=%d\n", pkthdr.ts_sec, pkthdr.ts_usec, pkthdr.incl_len, pkthdr.orig_len);
+        //printf("time=[%d,%d]   incl_len=%d    orig_len=%d\n", pkthdr.ts_sec, pkthdr.ts_usec, pkthdr.incl_len, pkthdr.orig_len);
         if (pkthdr.incl_len > mxlen) {
             mxlen = pkthdr.incl_len;
             printf("mxlen=%d\n", mxlen);
@@ -78,13 +156,31 @@ void analyze(string filename)
         //for (int i = 14; i < 50; ++i) printf("%02x ", buf[i]);printf("\n");
         ++cnt;
         
+        if (total1 == 0 && cnt > 2000000) {
+            total1 = total;
+            gettimeofday(&t1, NULL);
+        }
+        if (total1 > 0) 
+            if (cnt % 100 == 0) usleep(5000);
+        
+        
+        
+        struct timeval t4;
+        gettimeofday(&t4, NULL);
+        if (gettime(t3, t4) > 1000000) {
+            cout << "cnt="<<cnt<<endl;
+            gettimeofday(&t3, NULL);
+        }
+        
+        //if (cnt < 4488827) continue;
+        
         if (buf[12] != 0x08 || buf[13] != 0x00) {//not ipv4
-            puts("not ipv4! ignore");
+            //puts("not ipv4! ignore");
             continue;
         }
         PacketPtr pkt = PacketPtr(new Packet);
-        pkt->ibuf_ = (buf + 14);
-        pkt->setIbufLen(pkthdr.incl_len - 14);
+//        pkt->ibuf_ = (buf + 14);
+        pkt->setIbuf(buf + 14, pkthdr.incl_len - 14);
         pkt->hw_protocol = ETHERTYPE_IP;
         pkt->unpack();        //if (!pkt->isTCP()) continue; if (ntohs(pkt->getTCPHeader()->source) != 80 && ntohs(pkt->getTCPHeader()->dest) != 80) continue;
 //        cout << pkt->getDest4() << "   ";
@@ -96,12 +192,63 @@ void analyze(string filename)
         }
 //        cout<<endl;
 
+        NAT nat(false);
         nat.translate(pkt);
-                                                                                                          
-        if (cnt > 20) break;
+        
+        FlowPtr f = pkt->getFlow();
+        if (f) {
+            if (f->analyze == 0) {
+                ++total_flow;
+                f->analyze = 1;
+            }
+            if (f->analyze <= 1) {
+                if (pkt->isTCP()) {
+                    if (ntohs(pkt->getSourcePort()) == 80 || ntohs(pkt->getDestPort()) == 80) {//http
+//                        printf("maybe http!\n");
+                        f->analyze = 2;
+                        ++http_flow;
+                    }
+                    if (ntohs(pkt->getSourcePort()) == 8080 || ntohs(pkt->getDestPort()) == 8080) {//http
+//                        printf("maybe http!\n");
+                        f->analyze = 2;
+                        ++http_flow;
+                    }
+                    if (ntohs(pkt->getSourcePort()) == 21 || ntohs(pkt->getDestPort()) == 21) {//http
+//                        printf("maybe ftp!\n");
+                        f->analyze = 3;
+                        ++ftp_flow;
+                    }
+                } else if (pkt->isUDP()) {
+                    if (ntohs(pkt->getSourcePort()) == 5060 || ntohs(pkt->getDestPort()) == 5060) {//http
+//                        printf("maybe sip!\n");
+                        f->analyze = 4;
+                        ++sip_flow;
+                    }
+                }
+            }
+            if (f->analyze == 2 || f->analyze == 100) {
+                if (parse((char*)(buf + 14), pkthdr.incl_len - 14)) {
+                    if (f->analyze == 2)
+                        ++literal;
+                    f->analyze = 100;
+                    
+                }
+            }
+        }
+                                                                                                     
+        if (cnt > 2200000) break;
+        
+
         
     } while (true);
-    cout << "total packets=" << cnt << "    total Kbytes=" << total << "   #flows=" << sm.flow_cnt_ << endl;
+    struct timeval t2;
+    gettimeofday(&t2, NULL);
+    total -= total1;
+    cout << "total packets=" << cnt << "    total Kbytes=" << total/1024 << "   #flows=" << sm.flow_cnt_ << endl;
+    long long time = gettime(t1, t2);
+    cout << "time=" << time/1000.0 << "ms  throughput(Mbps)=" << total * 8 * 1000000 / 1024 / 1024 / time  << endl;
+    cout << "total_flow=" << total_flow << "  http=" << http_flow << "  ftp=" << ftp_flow << "  sip=" << sip_flow <<endl;
+    cout << "literal_http_flow=" << literal << endl;
 }
 
 int main(int argc, char **argv)
@@ -109,6 +256,7 @@ int main(int argc, char **argv)
     //sm.extra = TCP;
     //sm.extra = SHIFT;
     sm.extra = NONE;
+    sm.tun = true;
     
     if (argc > 1) {
         for (int i = 1; i < argc; ++i) {
@@ -126,46 +274,39 @@ int main(int argc, char **argv)
 
 
     sm.init("example.conf");
-	init_socket();
+	//init_socket();
 	int rv;
 	char buf[4096] __attribute__ ((aligned));
-	int fd = nfqueue_init();
+	int fd;
+    char tun_name[100] = {0};
+    if (!sm.tun)
+        fd = nfqueue_init();
+    else
+        fd = tun_create(tun_name);
 	
 	for (;;) {
-	/*
-    fd_set rfds;
-    struct timeval tv;
-    int retval;
-
-    FD_ZERO(&rfds);
-    FD_SET(fd, &rfds);
-
-    tv.tv_sec = 0;
-    tv.tv_usec = 10000;
-    
-    retval = select(1, &rfds, NULL, NULL, &tv);
-    
-           if (retval == -1)
-               perror("select()");
-           else if (retval) {
-               printf("Data is available now.\n");
-           }else {
-               //printf("No data within five seconds.\n");
-               socket6.timeout();
-               continue;
-           }
-*/	
-		if ((rv = recv(fd, buf, sizeof(buf), 0)) >= 0) {
-			nfqueue_handle(buf, rv);
-			continue;
-		}
-		if (rv < 0 && errno == ENOBUFS) {
-			printf("losing packets!\n");
-			continue;
-		}
-		perror("recv failed");
-		break;
+        if (!sm.tun) {
+		    if ((rv = recv(fd, buf, sizeof(buf), 0)) >= 0) {
+			    nfqueue_handle(buf, rv);
+			    continue;
+		    }
+		    if (rv < 0 && errno == ENOBUFS) {
+			    printf("losing packets!\n");
+			    continue;
+		    }
+		    perror("recv failed");
+		    break;
+        } else {
+        	rv = read(tun_fd, buf, sizeof(buf));
+//printf("tun recv %d\n", rv);
+        	if (rv < 0) {
+                perror("recv_tun failed");
+        		return -1;
+            }
+            tun_handle(buf, rv);
+        }
 	}
-	nfqueue_close();
+    if (!sm.tun) 
+    	nfqueue_close();
 	return 0;
 }

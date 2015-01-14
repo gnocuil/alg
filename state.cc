@@ -9,6 +9,8 @@ using namespace std;
 
 StateManager sm;
 
+pthread_mutex_t smutex = PTHREAD_MUTEX_INITIALIZER;
+
 void StateManager::init(const std::string file)
 {
     analysisMode = false;
@@ -69,9 +71,11 @@ void StateManager::addIPv4Pool(const IPv4Addr& ip)
     
 FlowPtr StateManager::doMapping(const IP6Port& ip6Port, const IPv6Addr& ip6srv)
 {
+    pthread_mutex_lock(&smutex);
+    FlowPtr ret = FlowPtr();
     pair<IP6Port, IPv6Addr> key(ip6Port, ip6srv);
     if (map64_.count(key) != 0) {
-        return map64_[key];
+        ret = map64_[key];
     } else if (pool_.size() > 0) {
         IP4Port ip4Port = pool_.front();
         pool_.pop();
@@ -80,51 +84,65 @@ FlowPtr StateManager::doMapping(const IP6Port& ip6Port, const IPv6Addr& ip6srv)
         map64_[key] = flow;
         map46_[newkey] = flow;
         //std::cout << "Create Mapping! " << *flow << std::endl;
-        return flow;
+        ret = flow;
     } else {
-        return FlowPtr();
+        ret = FlowPtr();
     }
+    pthread_mutex_unlock(&smutex);
+    return ret;
 }
 
 FlowPtr StateManager::getMapping(const IP6Port& ip6Port, const IPv6Addr& ip6srv)
 {
+    pthread_mutex_lock(&smutex);
+    FlowPtr ret = FlowPtr();
     pair<IP6Port, IPv6Addr> key(ip6Port, ip6srv);
     if (map64_.count(key) != 0) {
-        return map64_[key];
+        ret = map64_[key];
     } else {
-        return FlowPtr();
+        ret = FlowPtr();
     }
+    pthread_mutex_unlock(&smutex);
+    return ret;
 }
 
 FlowPtr StateManager::getMapping(const IP4Port& ip4Port, const IPv4Addr& ip4srv)
 {
+    pthread_mutex_lock(&smutex);
+    FlowPtr ret = FlowPtr();
     pair<IP4Port, IPv4Addr> key(ip4Port, ip4srv);
     if (map46_.count(key) != 0) {
-        return map46_[key];
+        ret = map46_[key];
     } else {
-        return FlowPtr();
+        ret = FlowPtr();
     }
+    pthread_mutex_unlock(&smutex);
+    return ret;
 }
 
 FlowPtr StateManager::doMapping44(const IP4Port& ip4Port1, const IP4Port& ip4Port2)
 {//ip4Port1: dest; ip4Port2: src
+    pthread_mutex_lock(&smutex);
+    FlowPtr ret = FlowPtr();
     pair<IP4Port, IP4Port> key1(ip4Port1, ip4Port2);
     pair<IP4Port, IP4Port> key2(ip4Port2, ip4Port1);
     if (map44_.count(key1) != 0) {
-        return map44_[key1];
-    }
-    if (map44_.count(key2) != 0) {
-        return map44_[key2];
-    }
-    if (ntohs(ip4Port2.getPort()) == 80 && ntohs(ip4Port1.getPort()) != 80) {
-        key1 = key2;
-    }
-    //printf("doMapping: destPort=%d srcPort=%d\n", key1.first.getPort(), key1.second.getPort());
-    ++flow_cnt_;
-        
-    FlowPtr flow = FlowPtr(new Flow(key1.first, key1.second));
-    map44_[key1] = flow;
-    return flow;
+        ret = map44_[key1];
+    } else if (map44_.count(key2) != 0) {
+        ret = map44_[key2];
+    } else {
+        if (ntohs(ip4Port2.getPort()) == 80 && ntohs(ip4Port1.getPort()) != 80) {
+            key1 = key2;
+        }
+        //printf("doMapping: destPort=%d srcPort=%d\n", key1.first.getPort(), key1.second.getPort());
+        ++flow_cnt_;
+            
+        FlowPtr flow = FlowPtr(new Flow(key1.first, key1.second));
+        map44_[key1] = flow;
+        ret = flow;
+    }    
+    pthread_mutex_unlock(&smutex);
+    return ret;
 }
 
 void StateManager::setIPv6Prefix(const IPv6Addr& prefix)

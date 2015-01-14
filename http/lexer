@@ -14,7 +14,7 @@
 <header>{
     ^\r\n                 begin(StartCondition__::body); return matched()[1];
     ^\n                   begin(StartCondition__::body); return matched()[0];
-    ^[a-zA-Z\-]+          return HTTPParser::HEADER_IDENT;
+    ^[a-zA-Z\-]+          if (matched()=="") ignore=true;return HTTPParser::HEADER_IDENT;
     \:                    return matched()[0];
     [ \t]*
     [^\:\n \t\r][^\n\r]*  return HTTPParser::HEADER_VALUE;
@@ -42,9 +42,10 @@
         }
         return HTTPParser::TAG_IDENT;
     }
+    \/\>                   begin(StartCondition__::body);return matched()[1];
     \>                     begin(StartCondition__::body);return matched()[0];
     \=                     begin(StartCondition__::tag_attvalue);return matched()[0];
-    [ \t]*
+    [ \t]+
 }
 
 <tag_attvalue>{

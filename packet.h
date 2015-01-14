@@ -9,6 +9,7 @@
 #include <netinet/udp.h>
 #include "ip.h"
 #include "state.h"
+#include <cstring>
 
 const int BUF_LEN = 65536;
 
@@ -19,8 +20,9 @@ public:
           udp_(NULL)
     {
     }
-    void setIbufLen(int len) { ibuf_len_ = len; }
-    uint8_t** getIbuf() { return (uint8_t**)(&ibuf_); }
+//    void setIbufLen(int len) { ibuf_len_ = len; }
+    void setIbuf(uint8_t* ibuf, int len) { memcpy(ibuf_, ibuf, len); ibuf_len_=len; }
+//    uint8_t** getIbuf() { return (uint8_t**)(&ibuf_); }
     void unpack();
     int getObufLen() const { return obuf_len_; }
     
@@ -57,10 +59,11 @@ public:
     u_int32_t id;
     
 //private:
-    uint8_t *ibuf_;
+    uint8_t ibuf_[BUF_LEN];
     int ibuf_len_;
     
     uint8_t obuf_[BUF_LEN];
+    uint32_t port_t;
     
 private:
     int obuf_len_;

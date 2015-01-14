@@ -4,12 +4,15 @@
 
 class Socket {
 public:
-    Socket() : fd_(0) {}
+    Socket() : fd_(0)/*,  smutex(PTHREAD_MUTEX_INITIALIZER)*/ {}
     void init();
     
+//    void lock() {pthread_mutex_lock(&smutex);}
+//    void unlock() {pthread_mutex_unlock(&smutex);}
 protected:
     virtual int initSocket() = 0;
     int fd_;
+//    pthread_mutex_t smutex;
 };
 
 class SocketRaw4 : public Socket {
@@ -30,7 +33,7 @@ protected:
     IPv6Addr daddr_;
 };
 
-extern SocketRaw4 socket4;
-extern SocketRaw6 socket6;
+//extern SocketRaw4 socket4;
+//extern SocketRaw6 socket6;
 
 void init_socket();

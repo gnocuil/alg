@@ -12,10 +12,11 @@ char s[LEN];
 char d[LEN];
 int len;
 
-const int T = 40;
+const int T = 10000;
 
 int size[TESTS] = {
-    100, 200, 300,400,500,600,700,800,900,1000
+//    100, 200, 300,400,500,600,700,800,900,1000
+    10, 20, 30,40,50,60,70,80,90,100
 };
 
 class Operation {
@@ -45,6 +46,7 @@ static long long gettime(struct timeval t1, struct timeval t2) {
 
 void generate(int n)
 {
+	ops.clear();
     string buf;
     buf += "<!DOCTYPE HTML>\r\n";
     buf += "<html>\r\n";
@@ -56,8 +58,8 @@ void generate(int n)
         op.start_pos = buf.size() + 19;
         op.end_pos = buf.size() + 19 + 8;
         buf += "<p><a href=\"http://10.0.0.2/test/test.html\">Test Page</a></p>\r\n";
-        op.newdata = "10,0,0,2";
-        if (i * 3 > n && rand() % 10 == 0)
+//        op.newdata = "10,0,0,2";
+//        if (i * 3 > n && rand() % 10 == 0)
             op.newdata = "10.0.0.2.tld";
 //        string test(buf.begin() + op.start_pos, buf.begin() + op.end_pos);
 //        cout<<test<<endl;
@@ -68,7 +70,7 @@ void generate(int n)
     buf += "/<html>\r\n";
     buf += "/<body>\r\n";
     len = buf.size();
-    printf("len_before=%d\n", len);
+    //printf("len_before=%d\n", len);
     memcpy(s, buf.c_str(), len);
 }
 
@@ -99,27 +101,25 @@ int modify_nosort()
 	}
 	//printf("newlen=%d\n", len);
 	int cnt = 0, pd, ps;
-	bool inside = false;
-	for (pd = ps = 0; pd < len; ++pd) {
-	    if (!inside && ps == ops[cnt].start_pos) {
-	        if (ops[cnt].newdata.size() == 0) {
-	            ps = ops[cnt++].end_pos;
-	        } else {
-    	        inside = true;
-	            ps = 0;
-	        }
+
+	for (pd = ps = 0; ; ) {
+		if (cnt == ops.size()) {
+			memcpy(d + pd, s + ps, len_old - ps);
+			break;
+		}
+	    if (ps == ops[cnt].start_pos) {
+	    	int sz = ops[cnt].newdata.size();
+	    	memcpy(d + pd, ops[cnt].newdata.c_str(), sz);
+	    	pd += sz;
+	    	ps = ops[cnt++].end_pos;
 	    }
-	    if (inside) {
-	        d[pd] = ops[cnt].newdata[ps++];
-	        if (ps == ops[cnt].newdata.size()) {
-	            inside = false;
-	            ps = ops[cnt++].end_pos;
-	        }
-	    } else {
-	        d[pd] = s[ps++];
-	    }
+	    else {
+	    	int sz = ops[cnt].start_pos - ps;
+	    	memcpy(d + pd, s + ps, sz);
+	    	pd += sz;
+	    	ps += sz;
+	    } 
 	}
-	
 }
 
 int modify()
@@ -138,25 +138,24 @@ int modify()
 	}
 	//printf("newlen=%d\n", len);
 	int cnt = 0, pd, ps;
-	bool inside = false;
-	for (pd = ps = 0; pd < len; ++pd) {
-	    if (!inside && ps == ops[cnt].start_pos) {
-	        if (ops[cnt].newdata.size() == 0) {
-	            ps = ops[cnt++].end_pos;
-	        } else {
-    	        inside = true;
-	            ps = 0;
-	        }
+
+	for (pd = ps = 0; ; ) {
+		if (cnt == ops.size()) {
+			memcpy(d + pd, s + ps, len_old - ps);
+			break;
+		}
+	    if (ps == ops[cnt].start_pos) {
+	    	int sz = ops[cnt].newdata.size();
+	    	memcpy(d + pd, ops[cnt].newdata.c_str(), sz);
+	    	pd += sz;
+	    	ps = ops[cnt++].end_pos;
 	    }
-	    if (inside) {
-	        d[pd] = ops[cnt].newdata[ps++];
-	        if (ps == ops[cnt].newdata.size()) {
-	            inside = false;
-	            ps = ops[cnt++].end_pos;
-	        }
-	    } else {
-	        d[pd] = s[ps++];
-	    }
+	    else {
+	    	int sz = ops[cnt].start_pos - ps;
+	    	memcpy(d + pd, s + ps, sz);
+	    	pd += sz;
+	    	ps += sz;
+	    } 
 	}
 	
 }
@@ -174,45 +173,75 @@ void print() {
 
 int main()
 {
+	srand(time(NULL));
     ofstream fout("result.csv");
         fout << "#opt"<<","<<"Optimized"<<","<<"Optimized-No sort"<<","<<"original"<<endl;
+    double y[TESTS][3];
+    int x[TESTS];
+    
+
+    
     for (int i = 0; i < TESTS; ++i) {
-        generate(size[i]);
+        double time1 = 0;
+        double time2 = 0;
+        double time3 = 0;
         
         //opt_sort
-        randswap();
+
         struct timeval t1;
-        gettimeofday(&t1, NULL);  
+        struct timeval t2;        
         for (int j = 0; j < T; ++j) {
-            ops = ops2;
+        	generate(size[i]);
+	        randswap();
+            //ops = ops2;
+            gettimeofday(&t1, NULL);  
             modify();
+	        gettimeofday(&t2, NULL);  
+	        time1 += 1.0*gettime(t1, t2);
         }
-        struct timeval t2;
-        gettimeofday(&t2, NULL);  
-        double time1 = 1.0*gettime(t1, t2) / T;
+        time1 /= T;
         
         //opt-nosort
-        gettimeofday(&t1, NULL);  
         for (int j = 0; j < T; ++j) {
-            ops = ops2;
+        	generate(size[i]);
+            //ops = ops2;
+	        gettimeofday(&t1, NULL);  
             modify_nosort();
+	        gettimeofday(&t2, NULL);  
+	        time2 += 1.0*gettime(t1, t2);
         }
-        gettimeofday(&t2, NULL);  
-        double time2 = 1.0*gettime(t1, t2) / T;        
+
+        time2 /= T;        
         
         //slow
-        randswap();
-        gettimeofday(&t1, NULL);  
+//        randswap();
         for (int j = 0; j < T; ++j) {
-            ops = ops2;
+            //ops = ops2;
+        	generate(size[i]);
+	        randswap();
+	        gettimeofday(&t1, NULL);  
             modify_slow();
+	        gettimeofday(&t2, NULL);  
+	        time3 += 1.0*gettime(t1, t2);
         }
-        gettimeofday(&t2, NULL);  
-        double time3 = 1.0*gettime(t1, t2) / T;
+        time3 /= T;
         
         cout << "#" << i+1 << "  len=" << len << "  size=" << size[i] << "  time1="<<time1<<"   time2="<<time2<<"   time3="<<time3<<endl;
 //        fout << size[i]<<","<<log(time1)<<","<<log(time2)<<","<<log(time3)<<endl;
-        fout << size[i]<<","<<1000000/(time1)<<","<<1000000/(time2)<<","<<1000000/(time3)<<endl;
+		x[i] = size[i];
+        y[i][0] = 1000000/(time1);
+        y[i][1] = 1000000/(time2);
+        y[i][2] = 1000000/(time3);
+        fout << size[i]<<","<<y[i][0]<<","<<y[i][1]<<","<<y[i][2]<<endl;
+
     }
+    cout << "x=[";
+    for (int i = 0; i < TESTS; ++i) cout << x[i] << " ";
+    cout << "];"<<endl;
+    cout << "y=[";
+    for (int i = 0; i < TESTS; ++i) cout << y[i][0] << " "; cout << ";"<<endl;
+    for (int i = 0; i < TESTS; ++i) cout << y[i][1] << " "; cout << ";"<<endl;
+    for (int i = 0; i < TESTS; ++i) cout << y[i][2] << " "; cout << ";"<<endl;
+    cout << "];"<<endl;
 //    print();
 }
